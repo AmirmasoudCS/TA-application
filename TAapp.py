@@ -251,12 +251,12 @@ def onClickOutside(event):
         toggleEscMenu();
 def closeApplication(event=None):
     global main_window,escape_menu;
-    escape_menu.lower();
+    escape_menu.lower(); # type: ignore 
     confirmation = messagebox.askyesno("Confirm Exit","Are you sure you want to close the application?");
     if confirmation:
         main_window.destroy();
     else:
-        escape_menu.lift();
+        escape_menu.lift(); # type: ignore
 def toggleEscMenu(event=None):
     global escape_menu,escMenuIsOpen;
     if escMenuIsOpen:
@@ -270,7 +270,7 @@ def toggleEscMenu(event=None):
     escape_menu.columnconfigure(1, weight=1)
     escape_menu.columnconfigure(2, weight=1)
     escape_menu.overrideredirect(True);
-    escape_menu.configure(bg=theme.PURPLE,highlightthickness=3,highlightbackground="black",highlightcolor="black");
+    escape_menu.configure(bg=theme.PURPLE,highlightthickness=3,highlightbackground="black",highlightcolor="black"); # type: ignore
     escape_menu.attributes("-topmost",True);
     width = 260;
     height=340;
@@ -294,7 +294,7 @@ def getCurrentTableView():
 def toCSV(tree):
     filePath = filedialog.asksaveasfilename(
         defaultextension=".csv",
-        filetypes=[("CSV files","*.csv","*.txt")],
+        filetypes=[("CSV files","*.csv","*.txt")], # type: ignore
         title="Save as CSV",
         initialdir=EXPORT_DIRECTORY
     )
@@ -324,9 +324,9 @@ def toExcel(tree):
         return;
     wb = Workbook();
     ws = wb.active;
-    ws.append(tree["columns"]);
+    ws.append(tree["columns"]); # type: ignore
     for iid in tree.get_children(""):
-        ws.append([tree.set(iid,col) for col in tree["columns"]]);
+        ws.append([tree.set(iid,col) for col in tree["columns"]]); # type: ignore
     try:
         wb.save(filePath);
         messagebox.showinfo("Success!","Excel file exported successfully!");
@@ -446,7 +446,7 @@ def selectTable():
             else:
                 calculated=""
             rowList = list(row)
-            rowList.insert(calculatedIndex,calculated)
+            rowList.insert(calculatedIndex,calculated) # type: ignore
             tableView.insert("","end",values=rowList)
         else:
             tableView.insert("","end",values=row);              
@@ -479,9 +479,9 @@ def addItem():
         messagebox.showwarning("Input Error","Please fill both id and score fields.");
         return;
     openCommentWindow(studentId,studentScore);
-    idText.set("");
-    scoreText.set("");
-    commentText.set("");
+    idText.set(""); # type: ignore
+    scoreText.set(""); # type: ignore
+    commentText.set(""); # type: ignore
     global nameLookupLabel
     nameLookupLabel.config(text="Name: ---")
 def removeItem():
@@ -491,7 +491,7 @@ def removeItem():
         return;
     db.removeItem(courseText.get().upper()+tableText.get(),studentId);
     selectTable();
-    removeIdText.set("");
+    removeIdText.set(""); # type: ignore
 def finalizeCourse():
     courseName = courseText.get().upper();
     if courseName == "":
@@ -574,8 +574,8 @@ def askBaseGrade():
     #createTitleBar(popup,"Base Grade")
     popup.title("Base Grade")
     popup.geometry("250x150")
-    popup.resizable(0,0)
-    popup.configure(bg=theme.BG)
+    popup.resizable(0,0) # type: ignore
+    popup.configure(bg=theme.BG) # type: ignore
     popup.grid_columnconfigure(0,weight=1)
     popup.grid_columnconfigure(1,weight=1)
     popup.grid_columnconfigure(2,weight=1)
@@ -607,8 +607,8 @@ def openUpdateWindow():
     updatePopup = Toplevel(main_window);
     #createTitleBar(updatePopup,"Update Record")
     updatePopup.title("Update Record");
-    updatePopup.resizable(0,0);
-    updatePopup.configure(bg=theme.BG);
+    updatePopup.resizable(0,0);# type: ignore
+    updatePopup.configure(bg=theme.BG); # type: ignore
     updatePopup.grid_columnconfigure(0,weight=1);
     updatePopup.grid_columnconfigure(2, weight=1);
     # SID (read-only)
@@ -657,8 +657,8 @@ def openCourseWindow():
     #createTitleBar(course_window, "Enter Course Name")
     course_window.title("Enter Course Name");
     course_window.geometry("300x200");
-    course_window.resizable(0,0);
-    course_window.configure(bg=theme.BG);
+    course_window.resizable(0,0); # type: ignore
+    course_window.configure(bg=theme.BG); # type: ignore
     course_window.grid_columnconfigure(0, weight=1);
     course_window.grid_columnconfigure(2, weight=1);
     ttk.Label(course_window,text="Enter Course: ",).grid(row=1,column=1,pady=10);
@@ -686,8 +686,8 @@ def openFilenameWindow():
     filename_window= Toplevel(main_window);
     filename_window.title("Enter Filename");
     filename_window.geometry("300x200");
-    filename_window.resizable(0,0);
-    filename_window.configure(bg=theme.BG);
+    filename_window.resizable(0,0); # type: ignore
+    filename_window.configure(bg=theme.BG); # type: ignore
     filename_window.grid_columnconfigure(0, weight=1);
     filename_window.grid_columnconfigure(2, weight=1);
     ttk.Label(filename_window,text="Enter Filename: " ).grid(row=0,column=1,pady=10);
@@ -707,8 +707,8 @@ def openCommentWindow(sid,score):
     popup = Toplevel(main_window);
     popup.title("Add Comment");
     popup.geometry("350x200");
-    popup.resizable(0,0);
-    popup.configure(bg=theme.BG);
+    popup.resizable(0,0); # type: ignore
+    popup.configure(bg=theme.BG); # type: ignore
     popup.grid_columnconfigure(0, weight=1);
     popup.grid_columnconfigure(2, weight=1);
     name = db.getName(sid,courseText.get().upper());
@@ -839,9 +839,9 @@ def openMainWindow():
     ttk.Button(removeFrame,text="Remove",width=10,command=removeItem).grid(row=0,column=2,padx=5);
     ttk.Button(informationFrame,text = "Finalize",width=12,command=finalizeCourse).grid(row=0,column=9,padx=20,sticky='e');
 ######
-    idText.set("");
-    scoreText.set("");
-    removeIdText.set("");
+    idText.set(""); # type: ignore
+    scoreText.set(""); # type: ignore
+    removeIdText.set(""); # type: ignore
 ######
     main_window.protocol("WM_DELETE_WINDOW", on_window_close);
 ################################
