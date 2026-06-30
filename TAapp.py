@@ -29,7 +29,7 @@ for r in range(5):
 main_window.rowconfigure(2, weight=1)   
 for c in range(11):     
     main_window.columnconfigure(c, weight=1)
-main_window.resizable(0,0);
+main_window.resizable(0,0); # type: ignore
 #main_window.withdraw();
 #main_window.after(0,main_window.withdraw)
 from teacherAssistantAppDB import Database
@@ -68,7 +68,7 @@ def showHistogram(tableName):
         scores.append(row[scoreIndex])
     popup = Toplevel(main_window)
     popup.overrideredirect(True)
-    popup.configure(bg=theme.BG)
+    popup.configure(bg=theme.BG) # type: ignore
     popup.grid_rowconfigure(1, weight=1)
     popup.grid_columnconfigure(0, weight=1)
 #   popup.title("Score Histogram")
@@ -101,10 +101,10 @@ def showHistogram(tableName):
     content.grid_columnconfigure(0, weight=1)
     centerWindow(popup, main_window)
     def startMove(event):
-        popup.x = event.x
-        popup.y = event.y
+        popup.x = event.x # type: ignore
+        popup.y = event.y # type: ignore
     def moveWindow(event):
-        popup.geometry(f"+{event.x_root - popup.x}+{event.y_root - popup.y}")
+        popup.geometry(f"+{event.x_root - popup.x}+{event.y_root - popup.y}") # type: ignore
     titleBar.bind("<Button-1>",startMove)
     titleBar.bind("<B1-Motion>",moveWindow)
 def change_theme(theme_name,window_name):
@@ -176,7 +176,7 @@ def openSettingsMenu():
     content.grid_columnconfigure(1, weight=1)
     settings_window.grid_rowconfigure(1, weight=1)
     settings_window.resizable(False,False);
-    settings_window.configure(bg=theme.BG);
+    settings_window.configure(bg=theme.BG); # type: ignore
     settings_window.attributes("-topmost",True);
     settings_window.after(100, lambda: settings_window.attributes("-topmost",False));
     #ttk.Label(content,text="Settings").grid(row=1,column=0,columnspan=2,pady=(10,15));
