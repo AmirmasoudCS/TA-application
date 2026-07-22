@@ -222,3 +222,5 @@ universityDB.db
 
 # Classroom files
 exports/
+Courses/*
+Courses/
