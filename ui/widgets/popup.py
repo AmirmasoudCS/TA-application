@@ -47,10 +47,13 @@ class Popup(Toplevel):
         self.grid_rowconfigure(1, weight=1)
 
         if modal:
-            self.transient(parent)
-            # grab_set() can hang/error if called before the window is
-            # actually mapped/visible (this is what caused the histogram
-            # popup to freeze the whole app). Force it to draw first.
+            # Only mark this as transient-to-parent if the parent is actually
+            # viewable. If the parent (e.g. the root window during initial
+            # course setup) is withdrawn, many window managers will refuse
+            # to ever map a transient child - which made wait_visibility()
+            # below hang forever with nothing appearing on screen.
+            if parent.winfo_viewable():
+                self.transient(parent)
             self.update_idletasks()
             self.deiconify()
             self.wait_visibility()
