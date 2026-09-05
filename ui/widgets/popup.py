@@ -48,6 +48,12 @@ class Popup(Toplevel):
 
         if modal:
             self.transient(parent)
+            # grab_set() can hang/error if called before the window is
+            # actually mapped/visible (this is what caused the histogram
+            # popup to freeze the whole app). Force it to draw first.
+            self.update_idletasks()
+            self.deiconify()
+            self.wait_visibility()
             self.grab_set()
 
     def _build_titlebar(self, title: str):
