@@ -20,33 +20,50 @@ A desktop app for teaching assistants to manage class rosters, track and grade a
 
 <div align="center">
     <img src="assets/screenshots/main_window.png">
-    <em><p></p></em>
+    <em><p>The main window: browse a table, search by ID, sort columns, add/update/remove scores, and export or finalize a course.</p></em>
 </div>
 
 **Course setup**
 
-<div align="center">
-    <img src="assets/screenshots/enter_course.png">
-    <em><p></p></em>
-</div>
-
-<div align="center">
-    <img src="assets/screenshots/select_rouster.png">
-    <em><p></p></em>
-</div>
+<table align="center">
+  <tr>
+    <td align="center">
+      <img src="assets/screenshots/enter_course.png"><br>
+      <em>Step 1 — enter a course name to get started.</em>
+    </td>
+    <td align="center">
+      <img src="assets/screenshots/select_rouster.png"><br>
+      <em>Step 2 — pick a roster file to import the class list from.</em>
+    </td>
+  </tr>
+</table>
 
 **Settings / themes**
 
 <div align="center">
     <img src="assets/screenshots/settings_menu.png">
-    <em><p></p></em>
+    <em><p>Switch color themes and change the active course without restarting the app.</p></em>
+</div>
+
+**Escape menu**
+
+<div align="center">
+    <img src="assets/screenshots/esc_menu.png">
+    <em><p>Quick-access menu (press Esc) for opening Settings or closing the application.</p></em>
 </div>
 
 **Score histogram**
 
 <div align="center">
     <img src="assets/screenshots/histogram.png">
-    <em><p></p></em>
+    <em><p>Visualize the score distribution for the currently selected table.</p></em>
+</div>
+
+**Finalize course**
+
+<div align="center">
+    <img src="assets/screenshots/finalize.png">
+    <em><p>Combine every assessment table into a single, per-student grade sheet. (names are blacked out for privacy reasons)</p></em>
 </div>
 
 ## Getting Started
@@ -84,9 +101,51 @@ Firstname Lastname StudentID
 
 <!-- Paste the tree structure output from your tool here -->
 
-```txt
-[project tree placeholder]
+```text
+📁
+├── 📁 assets
+│   └── 📁 screenshots
+├── 📁 data
+│   └── 📁 rosters
+├── 📁 db
+│   ├── 🐍 __init__.py
+│   ├── 🐍 assessment_repository.py
+│   ├── 🐍 connection.py
+│   ├── 🐍 course_repository.py
+│   ├── 🐍 database.py
+│   ├── 🐍 models.py
+│   └── 🐍 student_repository.py
+├── 📁 logs
+├── 📁 services
+│   ├── 🐍 __init__.py
+│   ├── 🐍 export_service.py
+│   ├── 🐍 roster_import_service.py
+│   └── 🐍 stats_service.py
+├── 📁 settings
+│   └── 📝 theme_config.txt
+├── 📁 ui
+│   ├── 📁 widgets
+│   │   ├── 🐍 __init__.py
+│   │   ├── 🐍 popup.py
+│   │   └── 🐍 table_view.py
+│   ├── 📁 windows
+│   │   ├── 🐍 __init__.py
+│   │   ├── 🐍 comment_window.py
+│   │   ├── 🐍 course_setup_window.py
+│   │   ├── 🐍 histogram_window.py
+│   │   ├── 🐍 settings_window.py
+│   │   └── 🐍 update_window.py
+│   ├── 🐍 __init__.py
+│   ├── 🐍 main_window.py
+│   └── 🐍 theme.py
+├── 🐍 config.py
+├── ⚖️ LICENSE
+├── 🐍 logging_setup.py
+├── 🐍 main.py
+├── 📘 README.md
+└── 📝 requirements.txt
 ```
+> Generated using [Tree Printer](https://github.com/AmirmasoudCS/Tree-Printer.git)
 
 ## Tech Stack
 
