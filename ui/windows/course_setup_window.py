@@ -13,7 +13,7 @@ from tkinter import StringVar
 from tkinter import ttk
 
 from ui.widgets.popup import Popup
-from services.roster_import_service import RosterImportService
+from services.roster_import_service import RosterImportService, SUPPORTED_EXTENSIONS
 
 
 class CourseNameStep(Popup):
@@ -67,7 +67,8 @@ class RosterSelectStep(Popup):
         else:
             ttk.Label(self.content, text="(no rosters found in data/rosters)").grid(row=1, column=0)
 
-        ttk.Label(self.content, text="Or type a new filename: ").grid(row=2, column=0, pady=(10, 2))
+        formats = "/".join(ext.lstrip(".") for ext in SUPPORTED_EXTENSIONS)
+        ttk.Label(self.content, text=f"Or type a filename ({formats}): ").grid(row=2, column=0, pady=(10, 2))
         entry = ttk.Entry(self.content, textvariable=self._filename_var, width=30)
         entry.grid(row=3, column=0, pady=5, padx=10)
 
@@ -77,12 +78,17 @@ class RosterSelectStep(Popup):
         self.center_over_parent()
 
     def _submit(self):
-        filename = self._filename_var.get().upper().strip()
+        filename = self._filename_var.get().strip()
         if not filename:
             self.notify("warning", "Input Error", "Please enter a file name.")
             return
-        if not filename.lower().endswith(".txt"):
-            filename += ".TXT"
+        if not filename.lower().endswith(SUPPORTED_EXTENSIONS):
+            formats = ", ".join(SUPPORTED_EXTENSIONS)
+            self.notify(
+                "warning", "Unsupported File Type",
+                f"Roster file must end in one of: {formats}",
+            )
+            return
         self.destroy()
         self.on_complete(self.course_name, filename)
 
