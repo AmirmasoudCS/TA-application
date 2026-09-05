@@ -72,10 +72,16 @@ class Popup(Toplevel):
             # chromeless popup (e.g. SettingsWindow) should disable the
             # parent window themselves (parent.attributes("-disabled", True))
             # and re-enable it on close, rather than relying on grab_set.
+            #
+            # -topmost is needed here regardless of `modal`: the main
+            # window runs with -fullscreen True, which on many systems
+            # keeps it stacked above ordinary windows. Without -topmost, a
+            # chromeless popup (e.g. the histogram) can open successfully
+            # but render invisibly behind the fullscreen main window.
             if parent.winfo_viewable():
                 self.transient(parent)
-            if modal:
-                self.attributes("-topmost", True)
+            self.attributes("-topmost", True)
+            self.lift()
 
     def _build_titlebar(self, title: str):
         bar = ttk.Frame(self)
