@@ -46,41 +46,29 @@ class Popup(Toplevel):
         self.content.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
         self.grid_rowconfigure(1, weight=1)
 
-        if modal:
-            # Only mark this as transient-to-parent if the parent is actually
-            # viewable. If the parent (e.g. the root window during initial
-            # course setup) is withdrawn, many window managers will refuse
-            # to ever map a transient child - which made wait_visibility()
-            # below hang forever with nothing appearing on screen.
-            if parent.winfo_viewable():
-                self.transient(parent)
+        if modal and not custom_titlebar:
+            # Real Tk grab_set() is only safe here because native-title-bar
+            # windows are properly managed by the window manager for focus
+            # and visibility. Chromeless (overrideredirect) windows are not
+            # reliably tracked by window managers, and combining
+            # overrideredirect with a modal grab caused two separate
+            # freezes (histogram popup hang, and losing all input after
+            # tabbing away from Settings). So overrideredirect popups never
+            # take a Tk grab - see the `elif custom_titlebar` branch below.
+            self.transient(parent)
             self.update_idletasks()
             self.deiconify()
             self.wait_visibility()
             self.grab_set()
-
-            # Chromeless (overrideredirect) windows aren't tracked by the
-            # window manager for alt-tab/focus restoration. If the app loses
-            # focus (e.g. tabbing to another window) while this popup still
-            # holds the exclusive grab, the grab can be left stuck on a
-            # window the WM no longer considers mapped/focusable - which
-            # freezes all input everywhere until the process is killed.
-            # Releasing the grab on focus-out and reclaiming it (plus
-            # bringing the window back to front) on focus-in avoids that.
-            self.bind("<FocusOut>", self._release_grab_on_focus_out)
-            self.bind("<FocusIn>", self._reclaim_grab_on_focus_in)
-
-    def _release_grab_on_focus_out(self, event=None):
-        if self.winfo_exists() and self.grab_current() == self:
-            self.grab_release()
-
-    def _reclaim_grab_on_focus_in(self, event=None):
-        if not self.winfo_exists():
-            return
-        self.lift()
-        self.focus_force()
-        if self.grab_current() is None:
-            self.grab_set()
+        elif custom_titlebar:
+            # No Tk grab. Callers that want modal-like behavior for a
+            # chromeless popup (e.g. SettingsWindow) should disable the
+            # parent window themselves (parent.attributes("-disabled", True))
+            # and re-enable it on close, rather than relying on grab_set.
+            if parent.winfo_viewable():
+                self.transient(parent)
+            if modal:
+                self.attributes("-topmost", True)
 
     def _build_titlebar(self, title: str):
         bar = ttk.Frame(self)
