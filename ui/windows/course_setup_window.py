@@ -10,7 +10,7 @@ config.ROSTER_DIRECTORY via RosterImportService, with a manual-entry
 fallback for anyone who wants to type a name that doesn't exist yet.
 """
 from tkinter import StringVar
-from tkinter import messagebox, ttk
+from tkinter import ttk
 
 from ui.widgets.popup import Popup
 from services.roster_import_service import RosterImportService
@@ -37,7 +37,7 @@ class CourseNameStep(Popup):
     def _submit(self):
         course_name = self._course_var.get().upper().strip()
         if not course_name:
-            messagebox.showwarning("Input Error", "Please enter a course name.")
+            self.notify("warning", "Input Error", "Please enter a course name.")
             return
         self.destroy()
         self.on_next(course_name)
@@ -53,7 +53,7 @@ class RosterSelectStep(Popup):
         self.roster_service = roster_service or RosterImportService()
         self.content.grid_columnconfigure(0, weight=1)
 
-        messagebox.showinfo("Confirmation", f"Course : {course_name}")
+        self.notify("info", "Confirmation", f"Course : {course_name}")
 
         ttk.Label(self.content, text="Choose a roster file: ").grid(row=0, column=0, pady=(10, 2))
         available = self.roster_service.list_rosters()
@@ -79,7 +79,7 @@ class RosterSelectStep(Popup):
     def _submit(self):
         filename = self._filename_var.get().upper().strip()
         if not filename:
-            messagebox.showwarning("Input Error", "Please enter a file name.")
+            self.notify("warning", "Input Error", "Please enter a file name.")
             return
         if not filename.lower().endswith(".txt"):
             filename += ".TXT"
