@@ -29,11 +29,11 @@ A desktop app for teaching assistants to manage class rosters, track and grade a
   <tr>
     <td align="center">
       <img src="assets/screenshots/enter_course.png"><br>
-      <em>Step 1 — enter a course name to get started.</em>
+      <em>Step 1: enter a course name to get started.</em>
     </td>
     <td align="center">
       <img src="assets/screenshots/select_rouster.png"><br>
-      <em>Step 2 — pick a roster file to import the class list from.</em>
+      <em>Step 2: pick a roster file to import the class list from.</em>
     </td>
   </tr>
 </table>
@@ -76,8 +76,8 @@ A desktop app for teaching assistants to manage class rosters, track and grade a
 ### Installation
 
 ```bash
-git clone https://github.com/<your-username>/<your-repo>.git
-cd <your-repo>
+git clone https://github.com/AmirmasoudCS/TA-application.git
+cd TA-application
 pip install -r requirements.txt
 ```
 
