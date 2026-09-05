@@ -28,7 +28,7 @@ class SettingsWindow(Popup):
         on_theme_change: callable(theme_name: str) -> None
         on_change_course: callable(course_name: str, filename: str) -> None
         """
-        super().__init__(parent, "Settings", theme, custom_titlebar=False)
+        super().__init__(parent, "Settings", theme, custom_titlebar=True)
         self.on_theme_change = on_theme_change
         self.on_change_course = on_change_course
 
