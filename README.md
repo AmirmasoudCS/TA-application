@@ -2,7 +2,7 @@
 
 A desktop app for teaching assistants to manage class rosters, track and grade assignments, and export results. Built with Python and Tkinter, backed by SQLite.
 
-## Features
+## ✨ Features
 
 - Manage multiple courses, each with its own students, tables, and grades
 - Import class rosters from simple text files
@@ -14,7 +14,7 @@ A desktop app for teaching assistants to manage class rosters, track and grade a
 - Finalize a course into a single combined grade sheet
 - Switch between multiple color themes
 
-## Screenshots
+## 🖼️ Screenshots
 
 **Main window**
 
@@ -66,14 +66,14 @@ A desktop app for teaching assistants to manage class rosters, track and grade a
     <em><p>Combine every assessment table into a single, per-student grade sheet. (names are blacked out for privacy reasons)</p></em>
 </div>
 
-## Getting Started
+## 🚀 Getting Started
 
-### Requirements
+### ⚙️ Requirements
 
 - Python 3.9+
 - See [`requirements.txt`](requirements.txt) for Python dependencies
 
-### Installation
+### 📦 Installation
 
 ```bash
 git clone https://github.com/AmirmasoudCS/TA-application.git
@@ -81,7 +81,7 @@ cd TA-application
 pip install -r requirements.txt
 ```
 
-### Running
+### ▶️ Running
 
 ```bash
 python main.py
@@ -89,7 +89,7 @@ python main.py
 
 On first launch, you'll be asked to enter a course name and select a roster file to import students from.
 
-### Roster files
+### 📋 Roster files
 
 Roster files live in `data/rosters/` and are plain `.txt` files, one student per line, in the format:
 
@@ -97,7 +97,7 @@ Roster files live in `data/rosters/` and are plain `.txt` files, one student per
 Firstname Lastname StudentID
 ```
 
-## Project Structure
+## 📁 Project Structure
 
 
 ```text
@@ -146,13 +146,13 @@ Firstname Lastname StudentID
 ```
 > Generated using [Tree Printer](https://github.com/AmirmasoudCS/Tree-Printer.git)
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 - **Python** / **Tkinter** - UI
 - **SQLite** - persistence
 - **openpyxl** - Excel export
 - **matplotlib** - score histograms
 
-## License
+## ⚖️ License
 
 See [LICENSE](LICENSE).
