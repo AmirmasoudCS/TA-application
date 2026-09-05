@@ -35,8 +35,8 @@ logger = get_logger("ui.main_window")
 _COLUMN_WIDTHS = {
     "score": (80, False, "center"),
     "sid": (80, False, "center"),
-    "calculated": (80, False, "center"),
-    "comment": (400, True, "w"),
+    "calculated": (150, False, "center"),
+    "comment": (250, True, "w"),
 }
 
 
