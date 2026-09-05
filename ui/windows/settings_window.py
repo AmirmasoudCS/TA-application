@@ -6,7 +6,7 @@ changes are both delegated to callbacks so this window has no direct
 dependency on Database or the rest of the app's globals.
 """
 from tkinter import StringVar
-from tkinter import messagebox, ttk
+from tkinter import ttk
 
 from ui.widgets.popup import Popup
 
@@ -88,7 +88,7 @@ class SettingsWindow(Popup):
             name = new_course_var.get().upper()
             filename = new_filename_var.get().upper()
             if not name or not filename:
-                messagebox.showwarning("Missing Input", "Please fill both course name and filename.")
+                self.notify("warning", "Missing Input", "Please fill both course name and filename.")
                 return
             self.destroy()
             self.on_change_course(name, filename)
