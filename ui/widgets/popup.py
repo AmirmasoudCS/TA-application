@@ -13,7 +13,7 @@ Subclasses/callers:
 - just use `Popup` directly and call `.content` to add widgets themselves.
 """
 from tkinter import Toplevel
-from tkinter import ttk
+from tkinter import messagebox, ttk
 
 
 class Popup(Toplevel):
@@ -109,3 +109,28 @@ class Popup(Toplevel):
             self.master.focus_force()
         except Exception:
             pass
+
+    def notify(self, kind: str, title: str, message: str):
+        """Shows a messagebox dialog safely from within a modal popup.
+
+        Tk only allows one active local grab at a time. Calling
+        messagebox.showwarning/showinfo/showerror directly while this
+        popup holds a modal grab_set() creates a second window that also
+        wants exclusive input - neither window can then receive clicks,
+        which looked like the whole app freezing. This releases the grab
+        first, shows the dialog, then re-acquires it if the popup is
+        still open.
+        """
+        had_grab = self.grab_current() == self
+        if had_grab:
+            self.grab_release()
+        try:
+            if kind == "warning":
+                messagebox.showwarning(title, message, parent=self)
+            elif kind == "error":
+                messagebox.showerror(title, message, parent=self)
+            else:
+                messagebox.showinfo(title, message, parent=self)
+        finally:
+            if had_grab and self.winfo_exists():
+                self.grab_set()
