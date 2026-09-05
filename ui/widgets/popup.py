@@ -55,7 +55,14 @@ class Popup(Toplevel):
             # freezes (histogram popup hang, and losing all input after
             # tabbing away from Settings). So overrideredirect popups never
             # take a Tk grab - see the `elif custom_titlebar` branch below.
-            self.transient(parent)
+            #
+            # Only mark this transient-to-parent if the parent is actually
+            # viewable (e.g. NOT the withdrawn root during initial course
+            # setup) - many window managers refuse to ever map a transient
+            # child of a hidden window, which made wait_visibility() below
+            # hang forever with nothing appearing on screen.
+            if parent.winfo_viewable():
+                self.transient(parent)
             self.update_idletasks()
             self.deiconify()
             self.wait_visibility()
