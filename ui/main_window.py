@@ -420,7 +420,11 @@ class MainWindow:
         if not numeric_scores:
             messagebox.showinfo("No Data", "No numeric scores to plot.")
             return
-        HistogramWindow(self.root, self.theme, numeric_scores)
+        try:
+            HistogramWindow(self.root, self.theme, numeric_scores)
+        except Exception:
+            logger.exception("Failed to open histogram window")
+            messagebox.showerror("Error", "Could not display the histogram. Check logs/taapp.log for details.")
 
     # ---- settings / theming ----
     def _open_settings(self):
