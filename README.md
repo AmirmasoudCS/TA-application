@@ -99,7 +99,6 @@ Firstname Lastname StudentID
 
 ## Project Structure
 
-<!-- Paste the tree structure output from your tool here -->
 
 ```text
 📁
