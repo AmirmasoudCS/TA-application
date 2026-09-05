@@ -16,24 +16,38 @@ A desktop app for teaching assistants to manage class rosters, track and grade a
 
 ## Screenshots
 
-<!-- Add screenshots below. Example: -->
-<!-- ![Main window](screenshots/main_window.png) -->
-
 **Main window**
 
-`[screenshot placeholder]`
+<div align="center">
+    <img src="assets/screenshots/main_window.png">
+    <em><p></p></em>
+</div>
 
 **Course setup**
 
-`[screenshot placeholder]`
+<div align="center">
+    <img src="assets/screenshots/enter_course.png">
+    <em><p></p></em>
+</div>
+
+<div align="center">
+    <img src="assets/screenshots/select_rouster.png">
+    <em><p></p></em>
+</div>
 
 **Settings / themes**
 
-`[screenshot placeholder]`
+<div align="center">
+    <img src="assets/screenshots/settings_menu.png">
+    <em><p></p></em>
+</div>
 
 **Score histogram**
 
-`[screenshot placeholder]`
+<div align="center">
+    <img src="assets/screenshots/histogram.png">
+    <em><p></p></em>
+</div>
 
 ## Getting Started
 
