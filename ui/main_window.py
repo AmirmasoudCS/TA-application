@@ -52,7 +52,7 @@ class MainWindow:
         for r in range(5):
             self.root.rowconfigure(r, weight=0)
         self.root.rowconfigure(2, weight=1)
-        for c in range(11):
+        for c in range(10):
             self.root.columnconfigure(c, weight=1)
 
         self.theme = Theme()
@@ -83,6 +83,8 @@ class MainWindow:
         self.esc_menu_open = False
 
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.root.update_idletasks()  # settle geometry before hiding, so popups can still center on it
+        self.root.withdraw()  # stay hidden until course setup finishes
 
     # ---- lifecycle ----
     def run(self):
@@ -115,6 +117,7 @@ class MainWindow:
         self.db.courses.create_assessment_info_table(course_name)
 
         self._build_main_ui()
+        self.root.deiconify()
 
     def _reopen_course_setup(self, course_name: str, filename: str):
         # Used by Settings -> "Apply New Course".
