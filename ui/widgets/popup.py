@@ -59,6 +59,29 @@ class Popup(Toplevel):
             self.wait_visibility()
             self.grab_set()
 
+            # Chromeless (overrideredirect) windows aren't tracked by the
+            # window manager for alt-tab/focus restoration. If the app loses
+            # focus (e.g. tabbing to another window) while this popup still
+            # holds the exclusive grab, the grab can be left stuck on a
+            # window the WM no longer considers mapped/focusable - which
+            # freezes all input everywhere until the process is killed.
+            # Releasing the grab on focus-out and reclaiming it (plus
+            # bringing the window back to front) on focus-in avoids that.
+            self.bind("<FocusOut>", self._release_grab_on_focus_out)
+            self.bind("<FocusIn>", self._reclaim_grab_on_focus_in)
+
+    def _release_grab_on_focus_out(self, event=None):
+        if self.winfo_exists() and self.grab_current() == self:
+            self.grab_release()
+
+    def _reclaim_grab_on_focus_in(self, event=None):
+        if not self.winfo_exists():
+            return
+        self.lift()
+        self.focus_force()
+        if self.grab_current() is None:
+            self.grab_set()
+
     def _build_titlebar(self, title: str):
         bar = ttk.Frame(self)
         bar.grid(row=0, column=0, sticky="ew")
