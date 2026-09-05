@@ -11,7 +11,8 @@ from ui.widgets.popup import Popup
 
 class HistogramWindow(Popup):
     def __init__(self, parent, theme, scores, bins: int = 10):
-        super().__init__(parent, "Score Histogram", theme, width=800, height=550, custom_titlebar=True)
+        super().__init__(parent, "Score Histogram", theme, width=800, height=550,
+                          custom_titlebar=True, modal=False)
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
