@@ -38,6 +38,7 @@ _COLUMN_WIDTHS = {
     "sid": (80, False, "center"),
     "calculated": (150, False, "center"),
     "comment": (250, True, "w"),
+    "grader": (120, False, "center"),
 }
 
 
@@ -312,8 +313,23 @@ class MainWindow:
         else:
             display_rows = [list(r) for r in raw_rows]
 
+        if not is_students_table and "GraderId" in columns:
+            grader_index = columns.index("GraderId")
+            columns[grader_index] = "Grader"
+            for row_list in display_rows:
+                row_list[grader_index] = self._grader_name(row_list[grader_index])
+
         self.table_view.render(columns, display_rows, _COLUMN_WIDTHS)
         self._update_stats(table_suffix, full_table, base_grade)
+
+    def _grader_name(self, grader_id) -> str:
+        """Resolves a stored GraderId back to a TA name for display.
+        Falls back to '---' for rows entered before GraderId was tracked,
+        or if the TA was somehow removed from the TAs table."""
+        if grader_id is None:
+            return "---"
+        ta = self.db.tas.get_by_id(grader_id)
+        return ta.name if ta else "---"
 
     def _update_stats(self, table_suffix, full_table, base_grade):
         if not ("Problem" in table_suffix or "Quiz" in table_suffix):
