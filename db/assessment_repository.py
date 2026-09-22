@@ -1,11 +1,17 @@
 """
-Read/write access to a single assessment table's rows (Sid, Score, Comment)
-plus generic table-introspection helpers used by the UI (columns, distinct
-rows, single-column value lists).
+Read/write access to a single assessment table's rows (Sid, Score, Comment,
+GraderId, UpdatedAt) plus generic table-introspection helpers used by the
+UI (columns, distinct rows, single-column value lists).
 
 Bug fix: removeItem() used to inline `sid` directly into the SQL string
 (f"... WHERE Sid = {sid}") instead of binding it as a parameter. Fixed here.
+
+GraderId/UpdatedAt were added so it's possible to tell who entered or last
+touched a given score, and when. add_or_replace_item() and update_item()
+now take an optional grader_id and stamp UpdatedAt themselves - callers
+don't need to worry about timestamp formatting.
 """
+from datetime import datetime
 from typing import List, Optional
 
 from db.connection import Connection
@@ -18,11 +24,13 @@ class AssessmentRepository:
     def __init__(self, connection: Connection):
         self.conn = connection
 
-    def add_or_replace_item(self, table_name: str, sid: int, score, comment: str = "") -> None:
+    def add_or_replace_item(self, table_name: str, sid: int, score, comment: str = "", grader_id: Optional[int] = None) -> None:
         comment = comment if comment != "" else "-"
+        updated_at = datetime.now().isoformat(timespec="seconds")
         self.conn.execute(
-            f"INSERT OR REPLACE INTO '{table_name}'(Sid, Score, Comment) VALUES(?, ?, ?)",
-            (sid, score, comment),
+            f"INSERT OR REPLACE INTO '{table_name}'(Sid, Score, Comment, GraderId, UpdatedAt) "
+            f"VALUES(?, ?, ?, ?, ?)",
+            (sid, score, comment, grader_id, updated_at),
         )
         self.conn.commit()
 
@@ -32,11 +40,12 @@ class AssessmentRepository:
         )
         self.conn.commit()
 
-    def update_item(self, course_name: str, table_name: str, sid: int, new_score, new_comment: str) -> None:
+    def update_item(self, course_name: str, table_name: str, sid: int, new_score, new_comment: str, grader_id: Optional[int] = None) -> None:
         table = course_name + table_name
+        updated_at = datetime.now().isoformat(timespec="seconds")
         self.conn.execute(
-            f"UPDATE '{table}' SET Score = ?, Comment = ? WHERE Sid = ?",
-            (new_score, new_comment, sid),
+            f"UPDATE '{table}' SET Score = ?, Comment = ?, GraderId = ?, UpdatedAt = ? WHERE Sid = ?",
+            (new_score, new_comment, grader_id, updated_at, sid),
         )
         self.conn.commit()
 
