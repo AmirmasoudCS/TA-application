@@ -23,5 +23,10 @@ LOG_DIRECTORY = os.path.join(BASE_DIRECTORY, "logs")
 SETTINGS_DIRECTORY = os.path.join(BASE_DIRECTORY, "settings")
 THEME_CONFIG_PATH = os.path.join(SETTINGS_DIRECTORY, "theme_config.txt")
 
+# Remembers which TA is using this install, so they're only asked once
+# instead of every launch. Purely local attribution, not an account system
+# — see db/ta_repository.py and ui/windows/ta_select_window.py.
+CURRENT_TA_PATH = os.path.join(SETTINGS_DIRECTORY, "current_ta.txt")
+
 for _directory in (ROSTER_DIRECTORY, EXPORT_DIRECTORY, LOG_DIRECTORY, SETTINGS_DIRECTORY):
     os.makedirs(_directory, exist_ok=True)
