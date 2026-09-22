@@ -57,7 +57,7 @@ class SettingsWindow(Popup):
             self._build_grader_section()
 
         ttk.Button(self.content, text="Close Settings", command=self.close).grid(
-            row=6, column=0, columnspan=2, padx=5, pady=5
+            row=7, column=0, columnspan=2, padx=5, pady=5
         )
 
         self.center_over_parent()
@@ -118,7 +118,15 @@ class SettingsWindow(Popup):
         lab machine), add a brand new one, or rename an existing entry
         (e.g. fixing a misspelled name) without losing that TA's history -
         renaming keeps the same TaId, so past GraderId references still
-        resolve to the corrected name."""
+        resolve to the corrected name.
+
+        Feedback here is an inline label, not self.notify()'s messagebox.
+        This window disables the main root while open (see __init__), and
+        stacking a second modal dialog on top of that disabled root is the
+        same class of Tk/Windows freeze popup.py's docstring already warns
+        about elsewhere in this app - so this section avoids it entirely
+        instead of fighting it.
+        """
         grader_frame = ttk.LabelFrame(
             self.content, text="Grader", padding=10, style="Settings.TLabelframe"
         )
@@ -137,16 +145,22 @@ class SettingsWindow(Popup):
         if names:
             switch_combo.current(0)
 
+        status_label = ttk.Label(grader_frame, text="")
+        status_label.grid(row=7, column=0, columnspan=2, sticky="w", pady=(10, 0))
+
+        def show_status(message: str):
+            status_label.config(text=message)
+
         def switch_ta():
             chosen = switch_var.get().strip()
             if not chosen:
-                self.notify("warning", "Missing Input", "Please choose a grader to switch to.")
+                show_status("Please choose a grader to switch to.")
                 return
             ta = self.ta_repository.get_or_create(chosen)
             if self.on_ta_changed:
                 self.on_ta_changed(ta.ta_id, ta.name)
-            self.notify("info", "Grader Switched", f"Now grading as {ta.name}.")
             self.current_ta_name = ta.name
+            show_status(f"Now grading as {ta.name}.")
 
         ttk.Button(grader_frame, text="Switch Grader", command=switch_ta).grid(
             row=2, column=1, padx=5, pady=3, sticky="w"
@@ -160,13 +174,13 @@ class SettingsWindow(Popup):
         def add_ta():
             name = new_ta_var.get().strip()
             if not name:
-                self.notify("warning", "Missing Input", "Please enter a name.")
+                show_status("Please enter a name.")
                 return
             ta = self.ta_repository.get_or_create(name)
             switch_combo.configure(values=[t.name for t in self.ta_repository.list_all()])
             switch_var.set(ta.name)
             new_ta_var.set("")
-            self.notify("info", "Grader Added", f"'{ta.name}' added. Use Switch Grader to grade as them.")
+            show_status(f"'{ta.name}' added. Use Switch Grader to grade as them.")
 
         ttk.Button(grader_frame, text="Add", command=add_ta).grid(row=4, column=1, padx=5, pady=3, sticky="w")
 
@@ -179,16 +193,16 @@ class SettingsWindow(Popup):
             selected = switch_var.get().strip()
             new_name = rename_var.get().strip()
             if not selected or not new_name:
-                self.notify("warning", "Missing Input", "Please select a grader above and enter a new name.")
+                show_status("Please select a grader above and enter a new name.")
                 return
             ta = self.ta_repository.get_by_name(selected)
             if not ta:
-                self.notify("error", "Not Found", f"Could not find grader '{selected}'.")
+                show_status(f"Could not find grader '{selected}'.")
                 return
             try:
                 renamed = self.ta_repository.rename(ta.ta_id, new_name)
             except ValueError as e:
-                self.notify("error", "Rename Failed", str(e))
+                show_status(str(e))
                 return
             switch_combo.configure(values=[t.name for t in self.ta_repository.list_all()])
             switch_var.set(renamed.name)
@@ -196,7 +210,7 @@ class SettingsWindow(Popup):
             if selected == self.current_ta_name and self.on_ta_changed:
                 self.on_ta_changed(renamed.ta_id, renamed.name)
                 self.current_ta_name = renamed.name
-            self.notify("info", "Renamed", f"'{selected}' renamed to '{renamed.name}'.")
+            show_status(f"'{selected}' renamed to '{renamed.name}'.")
 
         ttk.Button(grader_frame, text="Rename", command=rename_ta).grid(row=6, column=1, padx=5, pady=3, sticky="w")
 
