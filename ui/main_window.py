@@ -82,6 +82,7 @@ class MainWindow:
         self.name_lookup_label = None
         self.id_entry = None
         self.score_entry = None
+        self.grader_label = None
 
         self.escape_menu = None
         self.esc_menu_open = False
@@ -205,7 +206,8 @@ class MainWindow:
         # --- information frame ---
         ttk.Label(info_frame, text=f"Course : {self.course_name}").grid(row=0, column=0, padx=10)
         ttk.Label(info_frame, text=f"Filename : {self.filename}").grid(row=1, column=0, padx=10)
-        ttk.Label(info_frame, text=f"Grader : {self.current_ta_name}").grid(row=0, column=1, padx=10)
+        self.grader_label = ttk.Label(info_frame, text=f"Grader : {self.current_ta_name}")
+        self.grader_label.grid(row=0, column=1, padx=10)
 
         ttk.Label(info_frame, text="Search by ID").grid(row=0, column=3, padx=10, pady=10)
         search_entry = ttk.Entry(info_frame, textvariable=self.search_var, width=20)
@@ -502,7 +504,18 @@ class MainWindow:
             self.theme.apply(self.root)
             self.theme.save_theme(theme_name)
 
-        SettingsWindow(self.root, self.theme, on_theme_change, self._reopen_course_setup)
+        def on_ta_changed(ta_id, ta_name):
+            self.current_ta_id = ta_id
+            self.current_ta_name = ta_name
+            self._save_current_ta(ta_name)
+            if self.grader_label:
+                self.grader_label.config(text=f"Grader : {ta_name}")
+
+        SettingsWindow(
+            self.root, self.theme, on_theme_change, self._reopen_course_setup,
+            ta_repository=self.db.tas, current_ta_name=self.current_ta_name,
+            on_ta_changed=on_ta_changed,
+        )
 
     # ---- escape menu ----
     def toggle_escape_menu(self, event=None):
