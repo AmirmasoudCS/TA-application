@@ -46,7 +46,14 @@ class CourseRepository:
         base_grade: Optional[float] = None,
     ) -> None:
         """Creates a per-course assessment table (e.g. Quiz1, ProblemSet2)
-        and records its base grade in <course>AssessmentInfo."""
+        and records its base grade in <course>AssessmentInfo.
+
+        GraderId and UpdatedAt were added so it's possible to tell who
+        entered or last touched a given score, and when. GraderId is a
+        loose reference to TAs.TaId (not a FOREIGN KEY) since assessment
+        tables are created per-course dynamically and we don't want table
+        creation to fail if the TAs table is ever recreated or cleared.
+        """
         final_table = course_name + table_name
 
         if table_name.endswith("Students"):
@@ -56,6 +63,7 @@ class CourseRepository:
         self.conn.execute(
             f"CREATE TABLE IF NOT EXISTS '{final_table}'("
             f"Sid INTEGER PRIMARY KEY, Score INTEGER, Comment TEXT, "
+            f"GraderId INTEGER, UpdatedAt TEXT, "
             f"FOREIGN KEY(Sid) REFERENCES '{course_name}Students'(Sid) "
             f"ON DELETE CASCADE ON UPDATE CASCADE)"
         )
