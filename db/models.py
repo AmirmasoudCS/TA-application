@@ -24,3 +24,8 @@ class ScoreEntry:
 class AssessmentInfo:
     table_name: str
     base_grade: Optional[float]
+
+@dataclass
+class TA:
+    ta_id: int
+    name: str
