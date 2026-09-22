@@ -10,6 +10,12 @@ GraderId/UpdatedAt were added so it's possible to tell who entered or last
 touched a given score, and when. add_or_replace_item() and update_item()
 now take an optional grader_id and stamp UpdatedAt themselves - callers
 don't need to worry about timestamp formatting.
+
+Every method that mutates a grade also logs an INFO line (table, sid,
+grader) so there's a plain-text audit trail in logs/taapp.log of who
+added, changed, or removed a score and when - separate from the
+GraderId/UpdatedAt columns themselves, since a removed row leaves no
+column behind to show who removed it.
 """
 from datetime import datetime
 from typing import List, Optional
@@ -33,12 +39,18 @@ class AssessmentRepository:
             (sid, score, comment, grader_id, updated_at),
         )
         self.conn.commit()
+        logger.info(
+            "Score set in %s: Sid=%s Score=%s GraderId=%s", table_name, sid, score, grader_id
+        )
 
-    def remove_item(self, table_name: str, sid: int) -> None:
+    def remove_item(self, table_name: str, sid: int, grader_id: Optional[int] = None) -> None:
         self.conn.execute(
             f"DELETE FROM '{table_name}' WHERE Sid = ?", (sid,)
         )
         self.conn.commit()
+        logger.info(
+            "Row removed from %s: Sid=%s GraderId=%s", table_name, sid, grader_id
+        )
 
     def update_item(self, course_name: str, table_name: str, sid: int, new_score, new_comment: str, grader_id: Optional[int] = None) -> None:
         table = course_name + table_name
@@ -48,6 +60,9 @@ class AssessmentRepository:
             (new_score, new_comment, grader_id, updated_at, sid),
         )
         self.conn.commit()
+        logger.info(
+            "Score updated in %s: Sid=%s Score=%s GraderId=%s", table, sid, new_score, grader_id
+        )
 
     def get_columns(self, table_name: str) -> List[str]:
         cursor = self.conn.execute(f"PRAGMA table_info('{table_name}')")
