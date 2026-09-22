@@ -62,6 +62,23 @@ class TARepository:
         row = cursor.fetchone()
         return TA(ta_id=row[0], name=row[1]) if row else None
 
+    def rename(self, ta_id: int, new_name: str) -> TA:
+        """Renames an existing TA in place (e.g. fixing a typo), keeping
+        the same TaId so past GraderId references on assessment rows
+        still resolve correctly. Raises ValueError if new_name is already
+        used by a different TA."""
+        new_name = new_name.strip()
+        conflict = self.get_by_name(new_name)
+        if conflict and conflict.ta_id != ta_id:
+            raise ValueError(f"'{new_name}' is already used by another TA.")
+
+        self.conn.execute(
+            "UPDATE TAs SET TaName = ? WHERE TaId = ?", (new_name, ta_id)
+        )
+        self.conn.commit()
+        logger.info("Renamed TA %d to %s", ta_id, new_name)
+        return self.get_by_id(ta_id)
+
     def list_all(self) -> List[TA]:
         cursor = self.conn.execute("SELECT TaId, TaName FROM TAs ORDER BY TaName")
         return [TA(ta_id=row[0], name=row[1]) for row in cursor.fetchall()]
