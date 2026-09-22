@@ -14,6 +14,9 @@ from tkinter import ttk
 
 from ui.widgets.popup import Popup
 from services.roster_import_service import RosterImportService, SUPPORTED_EXTENSIONS
+from logging_setup import get_logger
+
+logger = get_logger("ui.course_setup_window")
 
 
 class CourseNameStep(Popup):
@@ -90,12 +93,14 @@ class RosterSelectStep(Popup):
             )
             return
         self.destroy()
+        logger.info("Course setup complete: course=%s roster=%s", self.course_name, filename)
         self.on_complete(self.course_name, filename)
 
 
 def start_course_setup(parent, theme, on_complete, roster_service: RosterImportService = None):
     """Convenience entry point: chains CourseNameStep -> RosterSelectStep."""
     def after_course_name(course_name):
+        logger.info("Course name entered: %s", course_name)
         RosterSelectStep(parent, theme, course_name, on_complete, roster_service)
 
     CourseNameStep(parent, theme, after_course_name)
