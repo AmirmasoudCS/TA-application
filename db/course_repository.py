@@ -31,6 +31,7 @@ class CourseRepository:
             f"CREATE TABLE IF NOT EXISTS '{table}'(Sid INTEGER PRIMARY KEY, SName TEXT)"
         )
         self.conn.commit()
+        logger.info("Ensured students table exists: %s", table)
 
     def create_assessment_info_table(self, course_name: str) -> None:
         table = f"{course_name}AssessmentInfo"
@@ -76,6 +77,7 @@ class CourseRepository:
             (final_table, base_grade),
         )
         self.conn.commit()
+        logger.info("Created assessment table %s (base grade=%s)", final_table, base_grade)
 
     def table_exists(self, table_name: str, course_name: str) -> bool:
         cursor = self.conn.execute(
@@ -123,6 +125,7 @@ class CourseRepository:
         cursor = self.conn.execute(query)
         columns = [desc[0] for desc in cursor.description]
         rows = cursor.fetchall()
+        logger.info("Finalized course %s (%d rows, %d assessment tables)", course_name, len(rows), len(tables))
         return columns, rows
 
     def finalize_into_table(self, course_name: str) -> str:
@@ -156,4 +159,5 @@ class CourseRepository:
             )
             self.conn.commit()
 
+        logger.info("Finalized course %s into %s (%d rows)", course_name, finalized_table, len(rows))
         return finalized_table
