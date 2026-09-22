@@ -39,6 +39,7 @@ _COLUMN_WIDTHS = {
     "calculated": (150, False, "center"),
     "comment": (250, True, "w"),
     "grader": (120, False, "center"),
+    "last modified": (150, False, "center"),
 }
 
 
@@ -121,6 +122,7 @@ class MainWindow:
             ta = self.db.tas.get_or_create(saved_name)
             self.current_ta_id = ta.ta_id
             self.current_ta_name = ta.name
+            logger.info("Session started as grader '%s' (id=%s)", ta.name, ta.ta_id)
             on_resolved()
             return
 
@@ -128,6 +130,7 @@ class MainWindow:
             self.current_ta_id = ta_id
             self.current_ta_name = ta_name
             self._save_current_ta(ta_name)
+            logger.info("Session started as grader '%s' (id=%s)", ta_name, ta_id)
             on_resolved()
 
         TASelectWindow(self.root, self.theme, self.db.tas, on_ta_chosen)
@@ -321,6 +324,13 @@ class MainWindow:
             for row_list in display_rows:
                 row_list[grader_index] = self._grader_name(row_list[grader_index])
 
+        if not is_students_table and "UpdatedAt" in columns:
+            updated_index = columns.index("UpdatedAt")
+            columns[updated_index] = "Last Modified"
+            for row_list in display_rows:
+                if row_list[updated_index] is None:
+                    row_list[updated_index] = "-"
+
         self.table_view.render(columns, display_rows, _COLUMN_WIDTHS)
         self._update_stats(table_suffix, full_table, base_grade)
 
@@ -414,7 +424,7 @@ class MainWindow:
             messagebox.showwarning("Input Error", "Please fill id field.")
             return
         full_table = self.course_name + self.table_name.get()
-        self.db.assessments.remove_item(full_table, sid)
+        self.db.assessments.remove_item(full_table, sid, grader_id=self.current_ta_id)
         self.select_table()
         self.remove_id_var.set("")
 
@@ -508,6 +518,7 @@ class MainWindow:
             self.current_ta_id = ta_id
             self.current_ta_name = ta_name
             self._save_current_ta(ta_name)
+            logger.info("Switched active grader to '%s' (id=%s)", ta_name, ta_id)
             if self.grader_label:
                 self.grader_label.config(text=f"Grader : {ta_name}")
 
