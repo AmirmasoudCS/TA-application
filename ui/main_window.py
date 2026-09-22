@@ -16,7 +16,7 @@ from tkinter import IntVar, StringVar, Tk, Toplevel, Frame
 from tkinter import font, messagebox, ttk
 from tkinter import filedialog
 
-from config import DB_PATH
+from config import DB_PATH, CURRENT_TA_PATH
 from db.database import Database
 from services.roster_import_service import RosterImportService
 from services.export_service import ExportService
@@ -28,6 +28,7 @@ from ui.windows.comment_window import CommentWindow
 from ui.windows.update_window import UpdateWindow
 from ui.windows.histogram_window import HistogramWindow
 from ui.windows.settings_window import SettingsWindow
+from ui.windows.ta_select_window import TASelectWindow
 from logging_setup import get_logger
 
 logger = get_logger("ui.main_window")
@@ -65,6 +66,8 @@ class MainWindow:
 
         self.course_name = None
         self.filename = None
+        self.current_ta_id = None
+        self.current_ta_name = None
         self.table_name = StringVar(self.root)
         self.id_var = IntVar(self.root)
         self.score_var = IntVar(self.root)
@@ -88,8 +91,11 @@ class MainWindow:
 
     # ---- lifecycle ----
     def run(self):
-        start_course_setup(self.root, self.theme, self._on_course_ready, self.roster_service)
+        self._resolve_current_ta(self._start_course_setup)
         self.root.mainloop()
+
+    def _start_course_setup(self):
+        start_course_setup(self.root, self.theme, self._on_course_ready, self.roster_service)
 
     def on_close(self):
         logger.info("Closing application.")
@@ -98,6 +104,50 @@ class MainWindow:
         except Exception:
             logger.exception("Error closing database on shutdown.")
         self.root.destroy()
+
+    # ---- TA identification ----
+    def _resolve_current_ta(self, on_resolved):
+        """Loads the saved TA name (if any) and looks up their id. If none
+        is saved yet, shows TASelectWindow first. Either way, on_resolved
+        is called once self.current_ta_id/current_ta_name are set.
+
+        This is purely for attribution (GraderId on assessment rows), not
+        a login system - see db/ta_repository.py's docstring.
+        """
+        saved_name = self._load_saved_ta_name()
+        if saved_name:
+            ta = self.db.tas.get_or_create(saved_name)
+            self.current_ta_id = ta.ta_id
+            self.current_ta_name = ta.name
+            on_resolved()
+            return
+
+        def on_ta_chosen(ta_id, ta_name):
+            self.current_ta_id = ta_id
+            self.current_ta_name = ta_name
+            self._save_current_ta(ta_name)
+            on_resolved()
+
+        TASelectWindow(self.root, self.theme, self.db.tas, on_ta_chosen)
+
+    @staticmethod
+    def _load_saved_ta_name():
+        try:
+            with open(CURRENT_TA_PATH, "r", encoding="utf-8") as f:
+                return f.read().strip() or None
+        except FileNotFoundError:
+            return None
+        except OSError:
+            logger.exception("Failed to read saved TA name from %s", CURRENT_TA_PATH)
+            return None
+
+    @staticmethod
+    def _save_current_ta(ta_name: str) -> None:
+        try:
+            with open(CURRENT_TA_PATH, "w", encoding="utf-8") as f:
+                f.write(ta_name)
+        except OSError:
+            logger.exception("Failed to save current TA name to %s", CURRENT_TA_PATH)
 
     # ---- course setup ----
     def _on_course_ready(self, course_name: str, roster_filename: str):
@@ -154,6 +204,7 @@ class MainWindow:
         # --- information frame ---
         ttk.Label(info_frame, text=f"Course : {self.course_name}").grid(row=0, column=0, padx=10)
         ttk.Label(info_frame, text=f"Filename : {self.filename}").grid(row=1, column=0, padx=10)
+        ttk.Label(info_frame, text=f"Grader : {self.current_ta_name}").grid(row=0, column=1, padx=10)
 
         ttk.Label(info_frame, text="Search by ID").grid(row=0, column=3, padx=10, pady=10)
         search_entry = ttk.Entry(info_frame, textvariable=self.search_var, width=20)
@@ -330,7 +381,7 @@ class MainWindow:
 
         def on_comment(comment_text):
             full_table = self.course_name + self.table_name.get()
-            self.db.assessments.add_or_replace_item(full_table, sid, score, comment_text)
+            self.db.assessments.add_or_replace_item(full_table, sid, score, comment_text, grader_id=self.current_ta_id)
             self.select_table()
             self.id_entry.focus_set()
 
@@ -358,7 +409,7 @@ class MainWindow:
         comment = values[3] if len(values) > 3 else ""
 
         def on_save(sid_, new_score, new_comment):
-            self.db.assessments.update_item(self.course_name, self.table_name.get(), sid_, new_score, new_comment)
+            self.db.assessments.update_item(self.course_name, self.table_name.get(), sid_, new_score, new_comment, grader_id=self.current_ta_id)
             self.select_table()
             self.table_view.select_row_by_sid(sid_)
 
