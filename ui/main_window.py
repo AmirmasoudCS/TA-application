@@ -94,6 +94,7 @@ class MainWindow:
 
     # ---- lifecycle ----
     def run(self):
+        logger.info("Application starting.")
         self._resolve_current_ta(self._start_course_setup)
         self.root.mainloop()
 
@@ -513,6 +514,7 @@ class MainWindow:
             self.theme.set_theme(theme_name)
             self.theme.apply(self.root)
             self.theme.save_theme(theme_name)
+            logger.info("Theme changed to '%s'", theme_name)
 
         def on_ta_changed(ta_id, ta_name):
             self.current_ta_id = ta_id
