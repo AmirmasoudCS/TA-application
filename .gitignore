@@ -226,3 +226,6 @@ Courses/*
 Courses/
 DSA4042s.txt
 data/rosters/*
+
+# Current TA
+settings/current_ta.txt
