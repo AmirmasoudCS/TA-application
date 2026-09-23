@@ -20,14 +20,15 @@ like reportlab, since all we need is a simple bordered table, not a full
 document layout engine.
 """
 import csv
+import glob
 import os
 from datetime import datetime
-from typing import List, Optional, Sequence
+from typing import List, Optional, Sequence, Tuple
 
 from openpyxl import Workbook
 from fpdf import FPDF
 
-from config import EXPORT_DIRECTORY
+from config import EXPORT_DIRECTORY, FONTS_DIRECTORY
 from logging_setup import get_logger
 
 logger = get_logger("services.export")
@@ -51,7 +52,14 @@ class ExportService:
     def export_to_csv(self, columns: Sequence[str], rows: Sequence[Sequence], filepath: str = None,
                        base_name: str = "export", directory: Optional[str] = None) -> str:
         filepath = filepath or self.default_filename(base_name, "csv", directory=directory)
-        with open(filepath, mode="w", newline="", encoding="utf-8") as f:
+        # utf-8-sig (UTF-8 with a BOM) rather than plain utf-8: Excel does
+        # not reliably auto-detect a BOM-less UTF-8 CSV, especially on a
+        # Windows machine whose locale isn't UTF-8, and instead guesses the
+        # system codepage - which turns anything outside ASCII (e.g.
+        # Persian names) into mojibake even though the file itself was
+        # written correctly. The BOM lets Excel detect UTF-8 reliably; a
+        # BOM-aware reader treats it as a zero-width marker, not data.
+        with open(filepath, mode="w", newline="", encoding="utf-8-sig") as f:
             writer = csv.writer(f, quoting=csv.QUOTE_MINIMAL, delimiter=";")
             writer.writerow(columns)
             writer.writerows(rows)
@@ -78,18 +86,15 @@ class ExportService:
         wrapping a table cell in fpdf2 complicates row alignment for
         comparatively little benefit at this table size.
 
-        fpdf2's built-in "Helvetica" is a core PDF font limited to Latin-1
-        (it has no way to render, say, Turkish, Vietnamese, Cyrillic, or
-        Chinese/Arabic characters, or several "smart" punctuation marks
-        outside that range) - without a Unicode-capable embedded TTF font,
-        which this app doesn't currently bundle, any such character would
-        crash pdf.output() with a UnicodeEncodeError. Every piece of text
-        is sanitized through _safe_pdf_text() first: anything outside
-        Latin-1 is replaced with '?' so the export always succeeds, at the
-        cost of not rendering non-Latin-1 names/comments correctly. If
-        precise rendering of those names matters, the real fix is
-        bundling a Unicode TTF (e.g. DejaVu Sans) and loading it via
-        pdf.add_font() instead of the core Helvetica font.
+        Font handling: fpdf2's built-in "Helvetica" is a core PDF font
+        limited to Latin-1 - it can't render Persian, Arabic, Chinese,
+        Cyrillic, etc. _configure_pdf_font() checks config.FONTS_DIRECTORY
+        for a TA-provided .ttf and, if one is found, loads it and uses it
+        for the whole table instead. If none is found, this falls back to
+        the core font with non-Latin-1 characters replaced by '?', same as
+        before. See _configure_pdf_font()'s docstring for what a bundled
+        font does and doesn't fix on its own (particularly for
+        right-to-left, letter-joining scripts like Persian/Arabic).
         """
         filepath = filepath or self.default_filename(base_name, "pdf", directory=directory)
 
@@ -97,36 +102,89 @@ class ExportService:
         pdf.set_auto_page_break(auto=True, margin=10)
         pdf.add_page()
 
+        font_family, supports_bold = self._configure_pdf_font(pdf)
+        needs_latin1_fallback = font_family == "Helvetica"
+
+        def clean(value) -> str:
+            text = "" if value is None else str(value)
+            return self._safe_pdf_text(text) if needs_latin1_fallback else text
+
         if title:
-            pdf.set_font("Helvetica", style="B", size=14)
-            pdf.cell(0, 10, self._safe_pdf_text(title), ln=1, align="C")
+            pdf.set_font(font_family, style="B" if supports_bold else "", size=14)
+            pdf.cell(0, 10, clean(title), ln=1, align="C")
 
         usable_width = pdf.w - pdf.l_margin - pdf.r_margin
         col_count = max(len(columns), 1)
         col_width = usable_width / col_count
 
-        pdf.set_font("Helvetica", style="B", size=9)
+        pdf.set_font(font_family, style="B" if supports_bold else "", size=9)
         for col in columns:
-            text = self._safe_pdf_text(str(col))
-            pdf.cell(col_width, 8, self._fit_text(pdf, text, col_width), border=1)
+            pdf.cell(col_width, 8, self._fit_text(pdf, clean(col), col_width), border=1)
         pdf.ln()
 
-        pdf.set_font("Helvetica", size=8)
+        pdf.set_font(font_family, size=8)
         for row in rows:
             for value in row:
-                text = self._safe_pdf_text("" if value is None else str(value))
-                pdf.cell(col_width, 7, self._fit_text(pdf, text, col_width), border=1)
+                pdf.cell(col_width, 7, self._fit_text(pdf, clean(value), col_width), border=1)
             pdf.ln()
 
         pdf.output(filepath)
-        logger.info("Exported PDF to %s (%d rows)", filepath, len(rows))
+        logger.info("Exported PDF to %s (%d rows, font=%s)", filepath, len(rows), font_family)
         return filepath
+
+    @staticmethod
+    def _configure_pdf_font(pdf: FPDF) -> Tuple[str, bool]:
+        """Looks for a .ttf file in config.FONTS_DIRECTORY and, if found,
+        registers it as a custom font ("ExportUnicode") for this PDF.
+        Returns (font_family, supports_bold) - supports_bold is only True
+        for the built-in "Helvetica", since a single auto-detected .ttf
+        only provides one style (fpdf2 needs a separate bold .ttf added
+        explicitly for a real bold face, which this simple auto-detection
+        doesn't attempt).
+
+        This fixes '?' showing up for scripts the core font can't render
+        at all (e.g. Persian/Arabic, Cyrillic, CJK) as long as the chosen
+        .ttf includes those glyphs. It does NOT by itself guarantee
+        correct-looking right-to-left or letter-joining scripts (Persian,
+        Arabic, Hebrew): that needs "text shaping", which fpdf2 supports
+        via pdf.set_text_shaping(True) but requires the optional
+        `uharfbuzz` package (`pip install "fpdf2[text-shaping]"`). This
+        method tries to enable it and logs a warning (once) if it's not
+        available, rather than failing the export - the font will still
+        render, just possibly with disconnected letters or in the wrong
+        visual order until that package is installed.
+        """
+        fonts = sorted(glob.glob(os.path.join(FONTS_DIRECTORY, "*.ttf")))
+        if not fonts:
+            return "Helvetica", True
+
+        font_path = fonts[0]
+        try:
+            pdf.add_font("ExportUnicode", fname=font_path)
+        except Exception:
+            logger.exception(
+                "Failed to load PDF font %s, falling back to the built-in font "
+                "(non-Latin-1 text will show as '?')", font_path,
+            )
+            return "Helvetica", True
+
+        try:
+            pdf.set_text_shaping(True)
+        except Exception:
+            logger.warning(
+                "Loaded PDF font %s but text shaping isn't available - install it with "
+                "`pip install \"fpdf2[text-shaping]\"` for correct rendering of "
+                "right-to-left / letter-joining scripts like Persian or Arabic. "
+                "Without it, glyphs will render but may look disconnected or "
+                "appear in the wrong order.", font_path,
+            )
+        return "ExportUnicode", False
 
     @staticmethod
     def _safe_pdf_text(text: str) -> str:
         """Replaces any character the core PDF font can't encode (i.e.
-        anything outside Latin-1) with '?', so export_to_pdf never crashes
-        on names/comments containing broader Unicode."""
+        anything outside Latin-1) with '?'. Only used as a fallback when
+        no custom Unicode font was found by _configure_pdf_font()."""
         try:
             text.encode("latin-1")
             return text
