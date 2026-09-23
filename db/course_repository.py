@@ -128,14 +128,19 @@ class CourseRepository:
         logger.info("Finalized course %s (%d rows, %d assessment tables)", course_name, len(rows), len(tables))
         return columns, rows
 
-    def finalize_into_table(self, course_name: str) -> str:
+    def finalize_into_table(self, course_name: str, columns_rows: Optional[tuple] = None) -> str:
         """Persists the finalized view into a real '<course>Finalized' table.
 
         Rewritten from the original finalizeTable(), which had a fatal
         'VALUSE' typo and re-created the table on every loop iteration.
+
+        columns_rows: optional pre-fetched (columns, rows) from finalize(),
+        so a caller that already queried for a "no data yet" check doesn't
+        pay for the same query twice. If omitted, finalize() is called
+        here as before.
         """
         finalized_table = f"{course_name}Finalized"
-        columns, rows = self.finalize(course_name)
+        columns, rows = columns_rows if columns_rows is not None else self.finalize(course_name)
 
         column_defs = []
         for col in columns:
