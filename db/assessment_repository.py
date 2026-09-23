@@ -43,6 +43,44 @@ class AssessmentRepository:
             "Score set in %s: Sid=%s Score=%s GraderId=%s", table_name, sid, score, grader_id
         )
 
+    def bulk_upsert(self, table_name: str, entries: List[tuple]) -> int:
+        """Bulk version of add_or_replace_item for imports of many scores
+        at once (e.g. services.score_import_service).
+
+        entries: sequence of (sid, score, comment, grader_id) tuples. The
+        whole batch shares a single UpdatedAt timestamp (they were all
+        imported in the same action) and a single commit, rather than one
+        round-trip per row - matters once an import is hundreds of rows.
+
+        All-or-nothing: if any row fails (e.g. a Sid not present in this
+        course's roster, rejected by the FOREIGN KEY), the whole batch is
+        rolled back rather than leaving a half-applied import - the
+        exception is re-raised so the caller can tell the user nothing
+        was imported and why.
+
+        Returns the number of rows written.
+        """
+        if not entries:
+            return 0
+        updated_at = datetime.now().isoformat(timespec="seconds")
+        params = [
+            (sid, score, comment if comment else "-", grader_id, updated_at)
+            for sid, score, comment, grader_id in entries
+        ]
+        try:
+            self.conn.executemany(
+                f"INSERT OR REPLACE INTO '{table_name}'(Sid, Score, Comment, GraderId, UpdatedAt) "
+                f"VALUES(?, ?, ?, ?, ?)",
+                params,
+            )
+        except Exception:
+            self.conn.rollback()
+            logger.exception("Bulk import into %s failed, rolled back (%d rows attempted)", table_name, len(params))
+            raise
+        self.conn.commit()
+        logger.info("Bulk imported %d scores into %s", len(params), table_name)
+        return len(params)
+
     def remove_item(self, table_name: str, sid: int, grader_id: Optional[int] = None) -> None:
         self.conn.execute(
             f"DELETE FROM '{table_name}' WHERE Sid = ?", (sid,)
