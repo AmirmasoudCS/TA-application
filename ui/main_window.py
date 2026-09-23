@@ -14,7 +14,6 @@ to ui/widgets/table_view.TableView.
 """
 from tkinter import IntVar, StringVar, Tk, Toplevel, Frame
 from tkinter import font, messagebox, ttk
-from tkinter import filedialog
 
 from config import DB_PATH, CURRENT_TA_PATH
 from db.database import Database
@@ -31,6 +30,7 @@ from ui.windows.histogram_window import HistogramWindow
 from ui.windows.settings_window import SettingsWindow
 from ui.windows.ta_select_window import TASelectWindow
 from ui.windows.score_import_window import ScoreImportWindow
+from ui.windows.export_window import ExportWindow
 from logging_setup import get_logger
 
 logger = get_logger("ui.main_window")
@@ -221,11 +221,8 @@ class MainWindow:
         search_entry.grid(row=1, column=3, pady=(0, 10), padx=10)
         search_entry.bind("<KeyRelease>", lambda e: self.table_view.filter_by_sid_prefix(self.search_var.get()))
 
-        ttk.Button(info_frame, text="Export to CSV", width=12, command=self._export_csv).grid(
+        ttk.Button(info_frame, text="Export", width=12, command=self._open_export_options).grid(
             row=1, column=9, sticky="e", padx=20, pady=5
-        )
-        ttk.Button(info_frame, text="Export to Excel", width=15, command=self._export_excel).grid(
-            row=1, column=8, sticky="e", padx=5, pady=5
         )
         ttk.Button(info_frame, text="Finalize", width=12, command=self._finalize_course).grid(
             row=0, column=9, padx=20, sticky="e"
@@ -506,35 +503,39 @@ class MainWindow:
         UpdateWindow(self.root, self.theme, sid, score, comment, on_save)
 
     # ---- export / finalize / histogram ----
-    def _export_csv(self):
+    def _open_export_options(self):
         if not self.table_view or not self.table_view.tree:
+            messagebox.showwarning("Nothing to Export", "Please select a table to view first.")
             return
-        filepath = filedialog.asksaveasfilename(
-            defaultextension=".csv", filetypes=[("CSV files", "*.csv")], title="Save as CSV",
-        )
-        if not filepath:
-            return
-        try:
-            self.table_view.export_csv(filepath)
-            messagebox.showinfo("Success!", "CSV exported successfully!")
-        except Exception as e:
-            logger.exception("CSV export failed")
-            messagebox.showerror("Error", str(e))
+        ExportWindow(self.root, self.theme, self._on_export_chosen)
 
-    def _export_excel(self):
-        if not self.table_view or not self.table_view.tree:
-            return
-        filepath = filedialog.asksaveasfilename(
-            defaultextension=".xlsx", filetypes=[("Excel Workbook", "*.xlsx")], title="Save as Excel",
-        )
-        if not filepath:
-            return
-        try:
-            self.table_view.export_excel(filepath)
-            messagebox.showinfo("Success!", "Excel file exported successfully!")
-        except Exception as e:
-            logger.exception("Excel export failed")
-            messagebox.showerror("Error", str(e))
+    def _on_export_chosen(self, format_key: str, folder: str):
+        base_name = f"{self.course_name}_{self.table_name.get()}" if self.course_name else "export"
+        exporters = {
+            "csv": [("CSV", self.table_view.export_csv)],
+            "excel": [("Excel", self.table_view.export_excel)],
+            "pdf": [("PDF", self.table_view.export_pdf)],
+            "all": [
+                ("CSV", self.table_view.export_csv),
+                ("Excel", self.table_view.export_excel),
+                ("PDF", self.table_view.export_pdf),
+            ],
+        }.get(format_key, [])
+
+        written = []
+        errors = []
+        for label, export_fn in exporters:
+            try:
+                path = export_fn(base_name=base_name, directory=folder)
+                written.append(f"{label}: {path}")
+            except Exception as e:
+                logger.exception("%s export failed", label)
+                errors.append(f"{label}: {e}")
+
+        if written:
+            messagebox.showinfo("Export Complete", "Saved:\n\n" + "\n".join(written))
+        if errors:
+            messagebox.showerror("Some Exports Failed", "\n".join(errors))
 
     def _finalize_course(self):
         if not self.course_name:
