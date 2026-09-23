@@ -6,6 +6,10 @@ Windows-style path ("settings\\theme_config.txt") which broke on
 non-Windows systems and depended on the current working directory.
 Now uses config.THEME_CONFIG_PATH, which is always an absolute path
 derived from config.BASE_DIRECTORY.
+
+TRadiobutton styling was added so widgets like ExportWindow's format
+picker (CSV/Excel/PDF/All) match the active theme instead of falling back
+to Tk's unstyled default radio button look.
 """
 from tkinter import ttk
 
@@ -362,6 +366,17 @@ class Theme:
             relief=[("pressed", "flat"), ("active", "raised")],
         )
         self.style.configure("sidStyle.TLabel", foreground=self.FG, background=self.FIELD_BG)
+        self.style.configure(
+            "TRadiobutton", background=self.BG, foreground=self.FG,
+            font=("Segoe UI", 10, "bold"), focuscolor=self.BG,
+        )
+        self.style.map(
+            "TRadiobutton",
+            background=[("active", self.BG)],
+            foreground=[("disabled", self.DISABLED), ("!disabled", self.FG)],
+            indicatorcolor=[("selected", self.PURPLE), ("!selected", self.FIELD_BG)],
+            indicatorforeground=[("selected", self.PURPLE)],
+        )
         self.style.layout("Treeview.Heading", [
             ("Treeheading.cell", {"sticky": "nswe"}),
             ("Treeheading.border", {"sticky": "nswe", "children": [
