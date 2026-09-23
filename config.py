@@ -31,10 +31,16 @@ LOG_DIRECTORY = os.path.join(BASE_DIRECTORY, "logs")
 SETTINGS_DIRECTORY = os.path.join(BASE_DIRECTORY, "settings")
 THEME_CONFIG_PATH = os.path.join(SETTINGS_DIRECTORY, "theme_config.txt")
 
+# Where a TA can drop in a .ttf font that supports the characters they need
+# (e.g. Persian/Arabic script) for PDF export. fpdf2's built-in core font
+# only supports Latin-1, so anything outside that renders as '?' unless a
+# real Unicode font is provided here - see ExportService.export_to_pdf.
+FONTS_DIRECTORY = os.path.join(BASE_DIRECTORY, "assets", "fonts")
+
 # Remembers which TA is using this install, so they're only asked once
 # instead of every launch. Purely local attribution, not an account system
 # — see db/ta_repository.py and ui/windows/ta_select_window.py.
 CURRENT_TA_PATH = os.path.join(SETTINGS_DIRECTORY, "current_ta.txt")
 
-for _directory in (ROSTER_DIRECTORY, EXPORT_DIRECTORY, SCORE_IMPORT_DIRECTORY, LOG_DIRECTORY, SETTINGS_DIRECTORY):
+for _directory in (ROSTER_DIRECTORY, EXPORT_DIRECTORY, SCORE_IMPORT_DIRECTORY, FONTS_DIRECTORY, LOG_DIRECTORY, SETTINGS_DIRECTORY):
     os.makedirs(_directory, exist_ok=True)
