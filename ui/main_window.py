@@ -20,6 +20,7 @@ from config import DB_PATH, CURRENT_TA_PATH
 from db.database import Database
 from services.roster_import_service import RosterImportService
 from services.export_service import ExportService
+from services.score_import_service import ScoreImportService
 from services.stats_service import StatsService
 from ui.theme import Theme
 from ui.widgets.table_view import TableView
@@ -29,6 +30,7 @@ from ui.windows.update_window import UpdateWindow
 from ui.windows.histogram_window import HistogramWindow
 from ui.windows.settings_window import SettingsWindow
 from ui.windows.ta_select_window import TASelectWindow
+from ui.windows.score_import_window import ScoreImportWindow
 from logging_setup import get_logger
 
 logger = get_logger("ui.main_window")
@@ -65,6 +67,7 @@ class MainWindow:
         self.db = Database(DB_PATH)
         self.roster_service = RosterImportService()
         self.export_service = ExportService()
+        self.score_import_service = ScoreImportService()
 
         self.course_name = None
         self.filename = None
@@ -238,6 +241,7 @@ class MainWindow:
 
         self.stats_label = ttk.Label(select_frame, text="")
         self.stats_label.grid(row=1, column=2, sticky="ew", padx=10, pady=5)
+        ttk.Button(select_frame, text="Bulk Import Scores", command=self._open_score_import).grid(row=1, column=8, padx=5, pady=5)
         ttk.Button(select_frame, text="Show Histogram", command=self._show_histogram).grid(row=1, column=9, padx=5, pady=5)
 
         # --- add frame ---
@@ -385,6 +389,54 @@ class MainWindow:
         btn.grid(row=2, column=0)
         entry.bind("<Return>", lambda e: btn.invoke())
         popup.center_over_parent()
+
+    # ---- bulk score import ----
+    def _open_score_import(self):
+        if not self.course_name:
+            messagebox.showwarning("Input Error", "Please set up a course first.")
+            return
+        ScoreImportWindow(self.root, self.theme, self._on_score_import_complete, self.score_import_service)
+
+    def _on_score_import_complete(self, table_suffix, rows):
+        """rows: List[ScoreImportRow] from ScoreImportService. The
+        assessment table must already exist (with a base grade already
+        set) - bulk import writes scores into an existing table rather
+        than deciding a base grade on the importer's behalf."""
+        if not self.db.courses.table_exists(table_suffix, self.course_name):
+            messagebox.showwarning(
+                "Table Not Found",
+                f"'{table_suffix}' doesn't exist yet for this course.\n\n"
+                f"Create it first via 'Table to present' -> Select Table "
+                f"(you'll be asked for a base grade), then re-run the import.",
+            )
+            return
+
+        full_table = self.course_name + table_suffix
+        entries = []
+        for row in rows:
+            grader_id = self.current_ta_id
+            if row.grader_name:
+                # Preserve the original grader's attribution if the file
+                # names one (e.g. it's another TA's own export), rather
+                # than overwriting it with whoever is running the import.
+                grader_id = self.db.tas.get_or_create(row.grader_name).ta_id
+            entries.append((row.sid, row.score, row.comment, grader_id))
+
+        try:
+            count = self.db.assessments.bulk_upsert(full_table, entries)
+        except Exception as e:
+            logger.exception("Bulk score import into %s failed", full_table)
+            messagebox.showerror(
+                "Import Failed",
+                f"No scores were imported - the whole file was rolled back.\n\n"
+                f"This usually means one or more Student IDs in the file aren't "
+                f"part of this course's roster.\n\nDetails: {e}",
+            )
+            return
+
+        self.table_name.set(table_suffix)
+        self.select_table()
+        messagebox.showinfo("Import Complete", f"Imported {count} score(s) into '{table_suffix}'.")
 
     # ---- add / remove / update ----
     def _lookup_student_name(self, event=None):
