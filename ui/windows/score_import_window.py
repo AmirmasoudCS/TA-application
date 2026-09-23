@@ -29,34 +29,40 @@ class ScoreImportWindow(Popup):
         self.score_import_service = score_import_service or ScoreImportService()
         self.content.grid_columnconfigure(0, weight=1)
 
-        ttk.Label(self.content, text="Assessment table to import into (e.g. Quiz1): ", wraplength=380).grid(
-            row=0, column=0, pady=(10, 2), sticky="w"
-        )
+        ttk.Label(
+            self.content, text="Assessment table to import into (e.g. Quiz1): ",
+            wraplength=380, justify="center", anchor="center",
+        ).grid(row=0, column=0, pady=(10, 2), sticky="ew")
         self._table_var = StringVar()
-        table_entry = ttk.Entry(self.content, textvariable=self._table_var, width=35)
-        table_entry.grid(row=1, column=0, pady=5, padx=10, sticky="w")
+        table_entry = ttk.Entry(self.content, textvariable=self._table_var, width=35, justify="center")
+        table_entry.grid(row=1, column=0, pady=5, padx=10)
         table_entry.focus_set()
 
-        ttk.Label(self.content, text="Choose a score file: ", wraplength=380).grid(row=2, column=0, pady=(10, 2), sticky="w")
+        ttk.Label(
+            self.content, text="Choose a score file: ",
+            wraplength=380, justify="center", anchor="center",
+        ).grid(row=2, column=0, pady=(10, 2), sticky="ew")
         available = self.score_import_service.list_score_files()
         self._filename_var = StringVar()
 
         if available:
             combo = ttk.Combobox(self.content, textvariable=self._filename_var,
-                                  values=available, width=32, state="readonly")
-            combo.grid(row=3, column=0, pady=5, padx=10, sticky="w")
+                                  values=available, width=32, state="readonly", justify="center")
+            combo.grid(row=3, column=0, pady=5, padx=10)
             combo.current(0)
         else:
-            ttk.Label(self.content, text="(no files found in data/score_imports)", wraplength=380).grid(
-                row=3, column=0, padx=10, sticky="w"
-            )
+            ttk.Label(
+                self.content, text="(no files found in data/score_imports)",
+                wraplength=380, justify="center", anchor="center",
+            ).grid(row=3, column=0, padx=10, sticky="ew")
 
         formats = "/".join(ext.lstrip(".") for ext in SUPPORTED_EXTENSIONS)
-        ttk.Label(self.content, text=f"Or type a filename ({formats}): ", wraplength=380).grid(
-            row=4, column=0, pady=(10, 2), sticky="w"
-        )
-        entry = ttk.Entry(self.content, textvariable=self._filename_var, width=35)
-        entry.grid(row=5, column=0, pady=5, padx=10, sticky="w")
+        ttk.Label(
+            self.content, text=f"Or type a filename ({formats}): ",
+            wraplength=380, justify="center", anchor="center",
+        ).grid(row=4, column=0, pady=(10, 2), sticky="ew")
+        entry = ttk.Entry(self.content, textvariable=self._filename_var, width=35, justify="center")
+        entry.grid(row=5, column=0, pady=5, padx=10)
 
         submit_btn = ttk.Button(self.content, text="Import", command=self._submit, width=12)
         submit_btn.grid(row=6, column=0, pady=15)
