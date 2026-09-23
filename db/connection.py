@@ -8,6 +8,12 @@ Fixes from the original teacherAssistantAppDB.Database:
   run in CPython at interpreter shutdown).
 - Foreign keys turned on once at connection time, not per-call.
 - Centralized query execution with logging instead of silent failures.
+
+rollback() was added alongside commit() so a caller doing a multi-row
+operation (e.g. AssessmentRepository.bulk_upsert) can explicitly undo a
+partially-applied batch if something in it fails, instead of leaving an
+open transaction sitting uncommitted until some unrelated later commit()
+call sweeps it in.
 """
 import sqlite3
 
@@ -41,6 +47,9 @@ class Connection:
 
     def commit(self):
         self.con.commit()
+
+    def rollback(self):
+        self.con.rollback()
 
     def close(self):
         try:
