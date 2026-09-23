@@ -1,6 +1,6 @@
 """
 Wraps a ttk.Treeview with scrollbars, column sorting, ID-prefix filtering,
-and CSV/Excel export.
+and CSV/Excel/PDF export.
 
 Replaces what used to be several free functions in TAapp.py operating on
 a global `tableView`: selectTable()'s tree-building code, sortColumns(),
@@ -12,7 +12,14 @@ controller (MainWindow) is responsible for querying the DB and calling
 `populate()`. This keeps the widget reusable and testable without a live
 DB connection, and avoids repeating the DB query in both selectTable() and
 filterTreeView() like the original code did.
+
+export_pdf() was added alongside export_csv/export_excel for the unified
+Export popup (see ui/windows/export_window.py). base_name/directory are
+passed straight through to ExportService so the popup's format+folder
+choice applies uniformly across all three formats.
 """
+from typing import Optional
+
 from tkinter import ttk
 
 from services.export_service import ExportService
@@ -116,13 +123,17 @@ class TableView:
         self._insert_rows(filtered)
 
     # ---- export ----
-    def export_csv(self, filepath: str = None):
+    def export_csv(self, filepath: str = None, base_name: str = "export", directory: Optional[str] = None) -> str:
         rows = self._current_rows()
-        return self.export_service.export_to_csv(self.columns, rows, filepath=filepath)
+        return self.export_service.export_to_csv(self.columns, rows, filepath=filepath, base_name=base_name, directory=directory)
 
-    def export_excel(self, filepath: str = None):
+    def export_excel(self, filepath: str = None, base_name: str = "export", directory: Optional[str] = None) -> str:
         rows = self._current_rows()
-        return self.export_service.export_to_excel(self.columns, rows, filepath=filepath)
+        return self.export_service.export_to_excel(self.columns, rows, filepath=filepath, base_name=base_name, directory=directory)
+
+    def export_pdf(self, filepath: str = None, base_name: str = "export", directory: Optional[str] = None, title: Optional[str] = None) -> str:
+        rows = self._current_rows()
+        return self.export_service.export_to_pdf(self.columns, rows, filepath=filepath, base_name=base_name, directory=directory, title=title)
 
     def _current_rows(self):
         return [self.tree.item(iid, "values") for iid in self.tree.get_children("")]
