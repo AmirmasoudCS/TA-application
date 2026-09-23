@@ -297,8 +297,17 @@ class MainWindow:
         base_grade = self.db.courses.get_base_grade(self.course_name, table_suffix)
 
         is_students_table = table_suffix.endswith("Students")
-        if not is_students_table:
-            lower_cols = [c.lower() for c in columns]
+        lower_cols = [c.lower() for c in columns]
+        # Calculated only makes sense when there's a Score to convert and an
+        # actual base grade to convert it against - e.g. the persisted
+        # <course>Finalized table (see finalize_into_table) has no
+        # registered base grade, and previously this check used a truthy
+        # `if base_grade:` which would also incorrectly skip a real base
+        # grade of exactly 0. Using `is not None` fixes both: the header is
+        # only added when the corresponding value will actually be filled
+        # in below, so columns/rows never get out of sync.
+        show_calculated = not is_students_table and "score" in lower_cols and base_grade is not None
+        if show_calculated:
             insert_at = lower_cols.index("comment") if "comment" in lower_cols else len(columns)
             columns.insert(insert_at, "Calculated")
 
@@ -308,8 +317,8 @@ class MainWindow:
 
         raw_rows = self.db.assessments.get_rows(full_table)
         display_rows = []
-        if not is_students_table and base_grade:
-            score_index = [c.lower() for c in self.db.assessments.get_columns(full_table)].index("score")
+        if show_calculated:
+            score_index = lower_cols.index("score")
             calc_index = columns.index("Calculated")
             for row in raw_rows:
                 row_list = list(row)
@@ -483,10 +492,15 @@ class MainWindow:
         if not rows:
             messagebox.showinfo("No Data", "No students/scores found to finalize.")
             return
+        finalized_table = self.db.courses.finalize_into_table(self.course_name, columns_rows=(columns, rows))
         prefix = self.course_name
         cleaned_columns = [c.removeprefix(prefix) if c.startswith(prefix) else c for c in columns]
         self.table_view.render(cleaned_columns, [list(r) for r in rows], _COLUMN_WIDTHS)
-        messagebox.showinfo("Success!", "Course has been finalized!")
+        messagebox.showinfo(
+            "Success!",
+            f"Course has been finalized and saved as '{finalized_table}'.\n"
+            f"You can view it again later via 'Table to present' -> Finalized.",
+        )
 
     def _show_histogram(self):
         full_table = self.course_name + self.table_name.get()
