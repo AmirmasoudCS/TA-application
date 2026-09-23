@@ -76,7 +76,21 @@ class ExportService:
         sized evenly across the page width. Cells that are too long for
         their column are truncated with '...' rather than wrapped, since
         wrapping a table cell in fpdf2 complicates row alignment for
-        comparatively little benefit at this table size."""
+        comparatively little benefit at this table size.
+
+        fpdf2's built-in "Helvetica" is a core PDF font limited to Latin-1
+        (it has no way to render, say, Turkish, Vietnamese, Cyrillic, or
+        Chinese/Arabic characters, or several "smart" punctuation marks
+        outside that range) - without a Unicode-capable embedded TTF font,
+        which this app doesn't currently bundle, any such character would
+        crash pdf.output() with a UnicodeEncodeError. Every piece of text
+        is sanitized through _safe_pdf_text() first: anything outside
+        Latin-1 is replaced with '?' so the export always succeeds, at the
+        cost of not rendering non-Latin-1 names/comments correctly. If
+        precise rendering of those names matters, the real fix is
+        bundling a Unicode TTF (e.g. DejaVu Sans) and loading it via
+        pdf.add_font() instead of the core Helvetica font.
+        """
         filepath = filepath or self.default_filename(base_name, "pdf", directory=directory)
 
         pdf = FPDF(orientation="L", unit="mm", format="A4")
@@ -85,7 +99,7 @@ class ExportService:
 
         if title:
             pdf.set_font("Helvetica", style="B", size=14)
-            pdf.cell(0, 10, title, ln=1, align="C")
+            pdf.cell(0, 10, self._safe_pdf_text(title), ln=1, align="C")
 
         usable_width = pdf.w - pdf.l_margin - pdf.r_margin
         col_count = max(len(columns), 1)
@@ -93,19 +107,31 @@ class ExportService:
 
         pdf.set_font("Helvetica", style="B", size=9)
         for col in columns:
-            pdf.cell(col_width, 8, self._fit_text(pdf, str(col), col_width), border=1)
+            text = self._safe_pdf_text(str(col))
+            pdf.cell(col_width, 8, self._fit_text(pdf, text, col_width), border=1)
         pdf.ln()
 
         pdf.set_font("Helvetica", size=8)
         for row in rows:
             for value in row:
-                text = "" if value is None else str(value)
+                text = self._safe_pdf_text("" if value is None else str(value))
                 pdf.cell(col_width, 7, self._fit_text(pdf, text, col_width), border=1)
             pdf.ln()
 
         pdf.output(filepath)
         logger.info("Exported PDF to %s (%d rows)", filepath, len(rows))
         return filepath
+
+    @staticmethod
+    def _safe_pdf_text(text: str) -> str:
+        """Replaces any character the core PDF font can't encode (i.e.
+        anything outside Latin-1) with '?', so export_to_pdf never crashes
+        on names/comments containing broader Unicode."""
+        try:
+            text.encode("latin-1")
+            return text
+        except UnicodeEncodeError:
+            return text.encode("latin-1", "replace").decode("latin-1")
 
     @staticmethod
     def _fit_text(pdf: FPDF, text: str, width: float) -> str:
