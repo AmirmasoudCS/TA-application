@@ -12,6 +12,8 @@ course/filename state, and a TableView widget. It delegates actual widget
 construction for popups to the classes in ui/windows/, and table rendering
 to ui/widgets/table_view.TableView.
 """
+import os
+
 from tkinter import IntVar, StringVar, Tk, Toplevel, Frame
 from tkinter import font, messagebox, ttk
 
@@ -507,10 +509,13 @@ class MainWindow:
         if not self.table_view or not self.table_view.tree:
             messagebox.showwarning("Nothing to Export", "Please select a table to view first.")
             return
-        ExportWindow(self.root, self.theme, self._on_export_chosen)
+        ExportWindow(self.root, self.theme, self._on_export_chosen, course_name=self.course_name)
 
     def _on_export_chosen(self, format_key: str, folder: str):
-        base_name = f"{self.course_name}_{self.table_name.get()}" if self.course_name else "export"
+        course_folder = os.path.join(folder, self.course_name) if self.course_name else folder
+        os.makedirs(course_folder, exist_ok=True)
+
+        base_name = self.table_name.get().strip() or "export"
         exporters = {
             "csv": [("CSV", self.table_view.export_csv)],
             "excel": [("Excel", self.table_view.export_excel)],
@@ -526,7 +531,7 @@ class MainWindow:
         errors = []
         for label, export_fn in exporters:
             try:
-                path = export_fn(base_name=base_name, directory=folder)
+                path = export_fn(base_name=base_name, directory=course_folder)
                 written.append(f"{label}: {path}")
             except Exception as e:
                 logger.exception("%s export failed", label)
