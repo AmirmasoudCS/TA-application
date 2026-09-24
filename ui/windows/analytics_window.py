@@ -23,13 +23,23 @@ Tabs:
                     Count" and "Average Score Given". This is meant as a
                     consistency check across TAs, not a performance
                     evaluation of any individual TA.
+  Student Lookup  - search one student (by Sid or name) and see every
+                    assessment they've been graded on, a "vs. class
+                    average" delta per assessment (on the normalized
+                    scale - see analytics_repository's module docstring),
+                    and a progress chart of their normalized score
+                    alongside the class average, ordered by when each was
+                    graded (UpdatedAt) rather than assessment name, so it
+                    reads as an actual timeline rather than an arbitrary
+                    ordering. Records with no UpdatedAt (from before that
+                    column existed) sort to the end.
 
 Every chart has a "Save Chart" button beneath it (PNG or PDF, defaulting
 into the same per-course export folder ExportWindow uses) so a TA can pull
 a chart out to send to a professor without re-building it elsewhere.
 
-More tabs (per-student lookup, at-risk list) are a planned follow-up once
-this first set is in real use.
+An at-risk list (students below some average threshold) is a planned
+follow-up, reusing Student Lookup's same per-student data.
 
 Unlike the app's small fixed-size popups, this window is resizable and
 sized for charts/tables - modeled on HistogramWindow's own
@@ -72,13 +82,16 @@ class AnalyticsWindow(Popup):
         overview_tab = ttk.Frame(notebook)
         completion_tab = ttk.Frame(notebook)
         workload_tab = ttk.Frame(notebook)
+        student_tab = ttk.Frame(notebook)
         notebook.add(overview_tab, text="Overview")
         notebook.add(completion_tab, text="Completion")
         notebook.add(workload_tab, text="Grader Workload")
+        notebook.add(student_tab, text="Student Lookup")
 
         self._build_overview_tab(overview_tab)
         self._build_completion_tab(completion_tab)
         self._build_workload_tab(workload_tab)
+        self._build_student_tab(student_tab)
 
         self.center_over_parent()
 
@@ -298,6 +311,145 @@ class AnalyticsWindow(Popup):
             ax.tick_params(axis="x", rotation=30)
 
         self._embed_chart(self._workload_chart_frame, fig, f"{self.course_name}_workload_{metric.replace(' ', '_').lower()}")
+
+    # ---- Student Lookup ----
+    def _build_student_tab(self, tab):
+        tab.grid_rowconfigure(1, weight=0)
+        tab.grid_rowconfigure(3, weight=1)
+        tab.grid_rowconfigure(4, weight=1)
+        tab.grid_columnconfigure(0, weight=1)
+
+        self._all_students = self.analytics.list_students(self.course_name)
+        self._student_display_values = [f"{s.sid} - {s.name}" for s in self._all_students]
+
+        header = ttk.Frame(tab)
+        header.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 5))
+        ttk.Label(header, text="Search (Sid or name): ").pack(side="left")
+        self._student_combo = ttk.Combobox(header, values=self._student_display_values, width=35)
+        self._student_combo.pack(side="left", padx=5)
+        # Typeahead: narrows the dropdown as the TA types, rather than
+        # requiring them to already know the exact Sid. Selecting an entry
+        # or pressing Enter both trigger a lookup.
+        self._student_combo.bind("<KeyRelease>", self._filter_student_combo)
+        self._student_combo.bind("<<ComboboxSelected>>", lambda e: self._lookup_student())
+        self._student_combo.bind("<Return>", lambda e: self._lookup_student())
+        ttk.Button(header, text="Search", command=self._lookup_student).pack(side="left", padx=5)
+
+        self._student_info_label = ttk.Label(tab, text="Search for a student above to see their record.")
+        self._student_info_label.grid(row=1, column=0, sticky="w", padx=10, pady=(0, 10))
+
+        self._student_table_frame = ttk.Frame(tab)
+        self._student_table_frame.grid(row=3, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        self._student_table_frame.grid_rowconfigure(0, weight=1)
+        self._student_table_frame.grid_columnconfigure(0, weight=1)
+
+        self._student_chart_frame = ttk.Frame(tab)
+        self._student_chart_frame.grid(row=4, column=0, sticky="nsew", padx=10, pady=(0, 10))
+
+    def _filter_student_combo(self, event):
+        # Enter/selection are handled by their own bindings, not here -
+        # this binding only narrows the dropdown list as the TA types.
+        if event.keysym in ("Return", "Down", "Up"):
+            return
+        typed = self._student_combo.get().strip().lower()
+        if not typed:
+            self._student_combo["values"] = self._student_display_values
+            return
+        filtered = [v for v in self._student_display_values if typed in v.lower()]
+        self._student_combo["values"] = filtered or self._student_display_values
+
+    def _lookup_student(self):
+        raw = self._student_combo.get().strip()
+        if not raw:
+            return
+        # Accept either "Sid - Name" (from picking a dropdown entry) or a
+        # bare Sid typed and submitted directly without selecting.
+        sid_part = raw.split(" - ", 1)[0].strip()
+        try:
+            sid = int(sid_part)
+        except ValueError:
+            messagebox.showwarning("Input Error", "Please enter or select a valid Student ID.")
+            return
+
+        summary = self.analytics.get_student_summary(self.course_name, sid)
+        if summary is None:
+            self._student_info_label.config(text=f"No student with Sid {sid} found on this course's roster.")
+            for widget in self._student_table_frame.winfo_children():
+                widget.destroy()
+            for widget in self._student_chart_frame.winfo_children():
+                widget.destroy()
+            return
+
+        self._render_student_summary(summary)
+
+    def _render_student_summary(self, summary):
+        avg_text = f"{summary.average:.2f}" if summary.average is not None else "N/A"
+        self._student_info_label.config(
+            text=f"{summary.name} (Sid {summary.sid}) | Overall average: {avg_text} "
+                 f"| Graded on {summary.assessments_graded}/{summary.assessments_total} assessments"
+        )
+
+        for widget in self._student_table_frame.winfo_children():
+            widget.destroy()
+        table = TableView(self._student_table_frame)
+        table.frame.grid(row=0, column=0, sticky="nsew")
+
+        def fmt(value, suffix=""):
+            return f"{value:.2f}{suffix}" if isinstance(value, (int, float)) else "-"
+
+        rows = []
+        for r in summary.records:
+            delta = r.vs_class_average
+            delta_text = "N/A" if delta is None else (f"+{delta:.2f}" if delta >= 0 else f"{delta:.2f}")
+            rows.append([
+                r.table_suffix, fmt(r.score), fmt(r.calculated), r.comment,
+                r.grader_name, r.updated_at or "-", delta_text,
+            ])
+        table.render(["Assessment", "Score", "Calculated", "Comment", "Grader", "Last Modified", "Vs Class Avg"], rows)
+
+        self._render_student_chart(summary)
+
+    def _render_student_chart(self, summary):
+        for widget in self._student_chart_frame.winfo_children():
+            widget.destroy()
+
+        plotted = [r for r in summary.records if r.normalized is not None]
+        if not plotted:
+            ttk.Label(self._student_chart_frame, text="No numeric scores to chart yet.").grid(row=0, column=0)
+            return
+
+        # Chronological order (by when each was graded) reads as an actual
+        # progress timeline; records with no timestamp (pre-dating the
+        # UpdatedAt column) sort to the end rather than breaking the sort.
+        plotted.sort(key=lambda r: (r.updated_at is None, r.updated_at))
+
+        labels = [r.table_suffix for r in plotted]
+        student_values = [r.normalized for r in plotted]
+        has_class_data = any(r.class_normalized_average is not None for r in plotted)
+        # NaN, not None: matplotlib's plot() expects numeric data and
+        # handles NaN by breaking the line at that point, but chokes on a
+        # raw None mixed into an otherwise-numeric list.
+        class_values = [
+            r.class_normalized_average if r.class_normalized_average is not None else float("nan")
+            for r in plotted
+        ]
+
+        fig, ax = self._new_figure()
+        x = range(len(labels))
+        ax.plot(x, student_values, marker="o", color=self.theme.PURPLE, label=summary.name)
+        if has_class_data:
+            ax.plot(x, class_values, marker="o", linestyle="--", color=self.theme.FG, alpha=0.6, label="Class Average")
+        ax.set_xticks(list(x))
+        ax.set_xticklabels(labels, color=self.theme.FG)
+        if len(labels) > 4:
+            ax.tick_params(axis="x", rotation=30)
+        ax.set_ylabel("Normalized Score", color=self.theme.FG)
+        ax.set_title(f"{summary.name} - Progress vs. Class Average", color=self.theme.FG)
+        legend = ax.legend(facecolor=self.theme.CARD, edgecolor=self.theme.BORDER)
+        for text in legend.get_texts():
+            text.set_color(self.theme.FG)
+
+        self._embed_chart(self._student_chart_frame, fig, f"{summary.sid}_{summary.name}_progress".replace(" ", "_"))
 
     def close(self):
         for fig in self._open_figures:
