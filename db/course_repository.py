@@ -98,7 +98,13 @@ class CourseRepository:
         result = cursor.fetchone()
         return result[0] if result else None
 
-    def _assessment_table_names(self, course_name: str) -> List[str]:
+    def list_assessment_tables(self, course_name: str) -> List[str]:
+        """Full table names (e.g. 'COURSEQuiz1') of every real assessment
+        registered for this course, i.e. everything in <course>AssessmentInfo.
+        The Students table is never included, since create_assessment_table
+        never registers it there. Used by finalize() and by
+        AnalyticsRepository, which needs the same list to aggregate across
+        every assessment in a course."""
         info_table = f"{course_name}AssessmentInfo"
         try:
             cursor = self.conn.execute(f"SELECT tableName FROM '{info_table}'")
@@ -109,7 +115,7 @@ class CourseRepository:
 
     def finalize(self, course_name: str):
         """Builds a wide table: Sid, SName, <assessment1>_Score, <assessment2>_Score, ..."""
-        tables = self._assessment_table_names(course_name)
+        tables = self.list_assessment_tables(course_name)
 
         students_table = f"{course_name}Students"
         select_clause = f"SELECT '{students_table}'.Sid, '{students_table}'.SName"
