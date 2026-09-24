@@ -32,14 +32,18 @@ Tabs:
                     graded (UpdatedAt) rather than assessment name, so it
                     reads as an actual timeline rather than an arbitrary
                     ordering. Records with no UpdatedAt (from before that
-                    column existed) sort to the end.
+                    column existed) sort to the end. Flags the student if
+                    their average is below the At-Risk tab's threshold.
+  At-Risk         - every roster student whose overall normalized average
+                    is below an adjustable threshold (shared with Student
+                    Lookup's flag), sorted lowest-first, with its own
+                    Export List (CSV/Excel/PDF/All, reusing ExportWindow)
+                    since this is the view most likely to get sent
+                    straight to a professor.
 
 Every chart has a "Save Chart" button beneath it (PNG or PDF, defaulting
 into the same per-course export folder ExportWindow uses) so a TA can pull
 a chart out to send to a professor without re-building it elsewhere.
-
-An at-risk list (students below some average threshold) is a planned
-follow-up, reusing Student Lookup's same per-student data.
 
 Unlike the app's small fixed-size popups, this window is resizable and
 sized for charts/tables - modeled on HistogramWindow's own
@@ -49,13 +53,14 @@ docstring on why chromeless + grab_set() was avoided).
 """
 import os
 
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox, DoubleVar
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from ui.widgets.popup import Popup
 from ui.widgets.table_view import TableView
+from ui.windows.export_window import ExportWindow
 from db.analytics_repository import AnalyticsRepository
 from config import EXPORT_DIRECTORY
 from logging_setup import get_logger
@@ -70,6 +75,10 @@ class AnalyticsWindow(Popup):
         self.analytics = analytics_repository
         self.course_name = course_name
         self._open_figures = []  # every embedded figure, closed together on window close
+        # Shared between the Student Lookup tab (flags a searched student
+        # if below this) and the At-Risk tab (lists everyone below this) -
+        # one Popup instance, so changing it in one place is consistent.
+        self._at_risk_threshold_var = DoubleVar(value=60.0)
 
         self.content.grid_rowconfigure(0, weight=1)
         self.content.grid_columnconfigure(0, weight=1)
@@ -83,15 +92,18 @@ class AnalyticsWindow(Popup):
         completion_tab = ttk.Frame(notebook)
         workload_tab = ttk.Frame(notebook)
         student_tab = ttk.Frame(notebook)
+        at_risk_tab = ttk.Frame(notebook)
         notebook.add(overview_tab, text="Overview")
         notebook.add(completion_tab, text="Completion")
         notebook.add(workload_tab, text="Grader Workload")
         notebook.add(student_tab, text="Student Lookup")
+        notebook.add(at_risk_tab, text="At-Risk")
 
         self._build_overview_tab(overview_tab)
         self._build_completion_tab(completion_tab)
         self._build_workload_tab(workload_tab)
         self._build_student_tab(student_tab)
+        self._build_at_risk_tab(at_risk_tab)
 
         self.center_over_parent()
 
@@ -315,8 +327,9 @@ class AnalyticsWindow(Popup):
     # ---- Student Lookup ----
     def _build_student_tab(self, tab):
         tab.grid_rowconfigure(1, weight=0)
-        tab.grid_rowconfigure(3, weight=1)
+        tab.grid_rowconfigure(2, weight=0)
         tab.grid_rowconfigure(4, weight=1)
+        tab.grid_rowconfigure(5, weight=1)
         tab.grid_columnconfigure(0, weight=1)
 
         self._all_students = self.analytics.list_students(self.course_name)
@@ -336,15 +349,18 @@ class AnalyticsWindow(Popup):
         ttk.Button(header, text="Search", command=self._lookup_student).pack(side="left", padx=5)
 
         self._student_info_label = ttk.Label(tab, text="Search for a student above to see their record.")
-        self._student_info_label.grid(row=1, column=0, sticky="w", padx=10, pady=(0, 10))
+        self._student_info_label.grid(row=1, column=0, sticky="w", padx=10, pady=(0, 2))
+
+        self._student_risk_label = ttk.Label(tab, text="", style="AtRisk.TLabel")
+        self._student_risk_label.grid(row=2, column=0, sticky="w", padx=10, pady=(0, 10))
 
         self._student_table_frame = ttk.Frame(tab)
-        self._student_table_frame.grid(row=3, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        self._student_table_frame.grid(row=4, column=0, sticky="nsew", padx=10, pady=(0, 10))
         self._student_table_frame.grid_rowconfigure(0, weight=1)
         self._student_table_frame.grid_columnconfigure(0, weight=1)
 
         self._student_chart_frame = ttk.Frame(tab)
-        self._student_chart_frame.grid(row=4, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        self._student_chart_frame.grid(row=5, column=0, sticky="nsew", padx=10, pady=(0, 10))
 
     def _filter_student_combo(self, event):
         # Enter/selection are handled by their own bindings, not here -
@@ -374,6 +390,7 @@ class AnalyticsWindow(Popup):
         summary = self.analytics.get_student_summary(self.course_name, sid)
         if summary is None:
             self._student_info_label.config(text=f"No student with Sid {sid} found on this course's roster.")
+            self._student_risk_label.config(text="")
             for widget in self._student_table_frame.winfo_children():
                 widget.destroy()
             for widget in self._student_chart_frame.winfo_children():
@@ -388,6 +405,15 @@ class AnalyticsWindow(Popup):
             text=f"{summary.name} (Sid {summary.sid}) | Overall average: {avg_text} "
                  f"| Graded on {summary.assessments_graded}/{summary.assessments_total} assessments"
         )
+
+        threshold = self._at_risk_threshold_var.get()
+        if summary.average is not None and summary.average < threshold:
+            self._student_risk_label.config(
+                text=f"\u26a0 At risk — average is below the {threshold:.0f}% threshold "
+                     f"(see the At-Risk tab to change it)."
+            )
+        else:
+            self._student_risk_label.config(text="")
 
         for widget in self._student_table_frame.winfo_children():
             widget.destroy()
@@ -450,6 +476,86 @@ class AnalyticsWindow(Popup):
             text.set_color(self.theme.FG)
 
         self._embed_chart(self._student_chart_frame, fig, f"{summary.sid}_{summary.name}_progress".replace(" ", "_"))
+
+    # ---- At-Risk ----
+    def _build_at_risk_tab(self, tab):
+        tab.grid_rowconfigure(2, weight=1)
+        tab.grid_columnconfigure(0, weight=1)
+
+        header = ttk.Frame(tab)
+        header.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 5))
+        ttk.Label(header, text="Flag students below (%): ").pack(side="left")
+        ttk.Spinbox(
+            header, from_=0, to=100, increment=5, width=6,
+            textvariable=self._at_risk_threshold_var,
+        ).pack(side="left", padx=5)
+        ttk.Button(header, text="Apply", command=self._render_at_risk_list).pack(side="left", padx=5)
+        ttk.Button(header, text="Export List", command=self._open_at_risk_export).pack(side="left", padx=(20, 0))
+
+        self._at_risk_info_label = ttk.Label(tab, text="")
+        self._at_risk_info_label.grid(row=1, column=0, sticky="w", padx=10, pady=(0, 5))
+
+        self._at_risk_table_frame = ttk.Frame(tab)
+        self._at_risk_table_frame.grid(row=2, column=0, sticky="nsew", padx=10, pady=(0, 10))
+
+        self._at_risk_table = None
+        self._render_at_risk_list()
+
+    def _render_at_risk_list(self):
+        threshold = self._at_risk_threshold_var.get()
+        at_risk = self.analytics.get_at_risk_students(self.course_name, threshold)
+
+        for widget in self._at_risk_table_frame.winfo_children():
+            widget.destroy()
+        self._at_risk_table_frame.grid_rowconfigure(0, weight=1)
+        self._at_risk_table_frame.grid_columnconfigure(0, weight=1)
+
+        self._at_risk_table = TableView(self._at_risk_table_frame)
+        self._at_risk_table.frame.grid(row=0, column=0, sticky="nsew")
+        rows = [
+            [s.sid, s.name, f"{s.average:.2f}" if s.average is not None else "-",
+             f"{s.assessments_graded}/{s.assessments_total}"]
+            for s in at_risk
+        ]
+        self._at_risk_table.render(["Sid", "Name", "Average", "Graded"], rows)
+
+        self._at_risk_info_label.config(
+            text=f"{len(at_risk)} student(s) below {threshold:.0f}% "
+                 f"(students with no graded assessments yet aren't included)"
+        )
+
+    def _open_at_risk_export(self):
+        if not self._at_risk_table or not self._at_risk_table.tree or not self._at_risk_table.tree.get_children():
+            messagebox.showinfo("Nothing to Export", "No at-risk students to export.")
+            return
+        ExportWindow(self, self.theme, self._on_at_risk_export_chosen, course_name=self.course_name)
+
+    def _on_at_risk_export_chosen(self, format_key: str, folder: str):
+        base_name = f"{self.course_name}_at_risk"
+        exporters = {
+            "csv": [("CSV", self._at_risk_table.export_csv)],
+            "excel": [("Excel", self._at_risk_table.export_excel)],
+            "pdf": [("PDF", self._at_risk_table.export_pdf)],
+            "all": [
+                ("CSV", self._at_risk_table.export_csv),
+                ("Excel", self._at_risk_table.export_excel),
+                ("PDF", self._at_risk_table.export_pdf),
+            ],
+        }.get(format_key, [])
+
+        written, errors = [], []
+        for label, export_fn in exporters:
+            try:
+                path = export_fn(base_name=base_name, directory=folder)
+                written.append(f"{label}: {path}")
+            except Exception as e:
+                logger.exception("%s export failed for at-risk list", label)
+                errors.append(f"{label}: {e}")
+
+        if written:
+            messagebox.showinfo("Export Complete", "Saved:\n\n" + "\n".join(written))
+        if errors:
+            messagebox.showerror("Some Exports Failed", "\n".join(errors))
 
     def close(self):
         for fig in self._open_figures:
