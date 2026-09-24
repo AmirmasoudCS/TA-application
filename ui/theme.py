@@ -377,6 +377,18 @@ class Theme:
             indicatorcolor=[("selected", self.PURPLE), ("!selected", self.FIELD_BG)],
             indicatorforeground=[("selected", self.PURPLE)],
         )
+        self.style.configure(
+            "TNotebook", background=self.BG, borderwidth=0,
+        )
+        self.style.configure(
+            "TNotebook.Tab", background=self.CARD, foreground=self.FG,
+            font=("Segoe UI", 10, "bold"), padding=(12, 6), borderwidth=0,
+        )
+        self.style.map(
+            "TNotebook.Tab",
+            background=[("selected", self.PURPLE), ("active", self.PURPLE_HOVER), ("!selected", self.CARD)],
+            foreground=[("selected", self.TEXT_LIGHT), ("!selected", self.FG)],
+        )
         self.style.layout("Treeview.Heading", [
             ("Treeheading.cell", {"sticky": "nswe"}),
             ("Treeheading.border", {"sticky": "nswe", "children": [
