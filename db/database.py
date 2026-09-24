@@ -1,6 +1,6 @@
 """
 Composition root for the DB layer. Owns one Connection and hands out the
-four repositories. This replaces the old monolithic `Database` class from
+five repositories. This replaces the old monolithic `Database` class from
 teacherAssistantAppDB.py — same idea (one thing to construct with a db
 path) but delegates actual query logic to focused repository classes.
 """
@@ -9,6 +9,7 @@ from db.course_repository import CourseRepository
 from db.student_repository import StudentRepository
 from db.assessment_repository import AssessmentRepository
 from db.ta_repository import TARepository
+from db.analytics_repository import AnalyticsRepository
 
 
 class Database:
@@ -19,6 +20,11 @@ class Database:
         self.assessments = AssessmentRepository(self.connection)
         self.tas = TARepository(self.connection)
         self.tas.create_table()
+        # Constructed last since it composes the repositories above rather
+        # than talking to the database directly.
+        self.analytics = AnalyticsRepository(
+            self.connection, self.courses, self.students, self.assessments, self.tas
+        )
 
     def close(self):
         self.connection.close()
