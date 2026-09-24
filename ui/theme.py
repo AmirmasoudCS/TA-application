@@ -367,6 +367,10 @@ class Theme:
         )
         self.style.configure("sidStyle.TLabel", foreground=self.FG, background=self.FIELD_BG)
         self.style.configure(
+            "AtRisk.TLabel", background=self.BG, foreground="#dc2626",
+            font=("Segoe UI", 10, "bold"),
+        )
+        self.style.configure(
             "TRadiobutton", background=self.BG, foreground=self.FG,
             font=("Segoe UI", 10, "bold"), focuscolor=self.BG,
         )
