@@ -28,7 +28,7 @@ from ui.widgets.table_view import TableView
 from ui.windows.course_setup_window import start_course_setup
 from ui.windows.comment_window import CommentWindow
 from ui.windows.update_window import UpdateWindow
-from ui.windows.histogram_window import HistogramWindow
+from ui.windows.analytics_window import AnalyticsWindow
 from ui.windows.settings_window import SettingsWindow
 from ui.windows.ta_select_window import TASelectWindow
 from ui.windows.score_import_window import ScoreImportWindow
@@ -241,7 +241,7 @@ class MainWindow:
         self.stats_label = ttk.Label(select_frame, text="")
         self.stats_label.grid(row=1, column=2, sticky="ew", padx=10, pady=5)
         ttk.Button(select_frame, text="Bulk Import Scores", command=self._open_score_import).grid(row=1, column=8, padx=5, pady=5)
-        ttk.Button(select_frame, text="Show Histogram", command=self._show_histogram).grid(row=1, column=9, padx=5, pady=5)
+        ttk.Button(select_frame, text="Analytics", command=self._open_analytics).grid(row=1, column=9, padx=5, pady=5)
 
         # --- add frame ---
         ttk.Label(add_frame, text="ID:").grid(row=0, column=0, padx=5)
@@ -560,23 +560,15 @@ class MainWindow:
             f"You can view it again later via 'Table to present' -> Finalized.",
         )
 
-    def _show_histogram(self):
-        full_table = self.course_name + self.table_name.get()
-        try:
-            scores = self.db.assessments.get_column_values(full_table, "Score")
-        except Exception:
-            logger.exception("Could not fetch scores for histogram")
-            messagebox.showerror("Error", "Could not load scores for this table.")
-            return
-        numeric_scores = [s for s in scores if isinstance(s, (int, float))]
-        if not numeric_scores:
-            messagebox.showinfo("No Data", "No numeric scores to plot.")
+    def _open_analytics(self):
+        if not self.course_name:
+            messagebox.showwarning("Input Error", "Please set up a course first.")
             return
         try:
-            HistogramWindow(self.root, self.theme, numeric_scores)
+            AnalyticsWindow(self.root, self.theme, self.db.analytics, self.course_name)
         except Exception:
-            logger.exception("Failed to open histogram window")
-            messagebox.showerror("Error", "Could not display the histogram. Check logs/taapp.log for details.")
+            logger.exception("Failed to open analytics window")
+            messagebox.showerror("Error", "Could not open analytics. Check logs/taapp.log for details.")
 
     # ---- settings / theming ----
     def _open_settings(self):
