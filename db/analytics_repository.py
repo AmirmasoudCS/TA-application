@@ -270,3 +270,23 @@ class AnalyticsRepository:
             sid=sid, name=name, records=records, average=average,
             assessments_graded=len(records), assessments_total=len(assessment_suffixes),
         )
+
+    def get_at_risk_students(self, course_name: str, threshold: float) -> List[StudentSummary]:
+        """Every roster student whose overall normalized average is below
+        threshold, sorted lowest-first. A student with no graded
+        assessments yet has no average to judge and is never flagged -
+        "at risk" describes a low average, not an ungraded one.
+
+        Note: this calls get_student_summary() once per roster student,
+        each of which queries every assessment table - fine for a
+        typical course's roster size, but untested against a very large
+        one (hundreds of students), where this could get noticeably slow
+        since there's no real data yet to check that against.
+        """
+        at_risk = []
+        for student in self.students.get_all(course_name):
+            summary = self.get_student_summary(course_name, student.sid)
+            if summary and summary.average is not None and summary.average < threshold:
+                at_risk.append(summary)
+        at_risk.sort(key=lambda s: s.average)
+        return at_risk
