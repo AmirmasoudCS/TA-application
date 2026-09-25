@@ -62,7 +62,7 @@ import shutil
 import tempfile
 from datetime import datetime
 
-from tkinter import ttk, filedialog, messagebox, DoubleVar
+from tkinter import ttk, filedialog, messagebox, DoubleVar, StringVar
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -349,15 +349,26 @@ class AnalyticsWindow(Popup):
         header = ttk.Frame(tab)
         header.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 5))
         ttk.Label(header, text="Search (Sid or name): ").pack(side="left")
-        self._student_combo = ttk.Combobox(header, values=self._student_display_values, width=35)
-        self._student_combo.pack(side="left", padx=5)
-        # Typeahead: narrows the dropdown as the TA types, rather than
-        # requiring them to already know the exact Sid. Selecting an entry
-        # or pressing Enter both trigger a lookup.
-        self._student_combo.bind("<KeyRelease>", self._filter_student_combo)
-        self._student_combo.bind("<<ComboboxSelected>>", lambda e: self._lookup_student())
-        self._student_combo.bind("<Return>", lambda e: self._lookup_student())
+        self._student_search_var = StringVar()
+        search_entry = ttk.Entry(header, textvariable=self._student_search_var, width=25)
+        search_entry.pack(side="left", padx=5)
+        search_entry.bind("<Return>", lambda e: self._lookup_student())
         ttk.Button(header, text="Search", command=self._lookup_student).pack(side="left", padx=5)
+
+        ttk.Label(header, text="  or pick: ").pack(side="left")
+        # Read-only, not editable: an editable Combobox whose 'values' get
+        # rewritten on every keystroke (an earlier version of this) is a
+        # genuinely fragile Tk pattern - backspace/arrow keys stop working
+        # reliably once the value list is reassigned mid-typing. A
+        # read-only Combobox has none of that risk, since there's no text
+        # editing happening in it at all - only clicking or arrowing
+        # through a fixed list, which is standard and reliable.
+        self._student_picker = ttk.Combobox(
+            header, values=self._student_display_values, state="readonly", width=28,
+        )
+        self._student_picker.pack(side="left", padx=5)
+        self._student_picker.bind("<<ComboboxSelected>>", self._on_student_picked)
+
         ttk.Button(header, text="Export Report", command=self._open_student_report_export).pack(side="left", padx=(20, 0))
 
         self._student_info_label = ttk.Label(tab, text="Search for a student above to see their record.")
@@ -380,44 +391,55 @@ class AnalyticsWindow(Popup):
         self._current_student_summary = None
         self._student_table = None
 
-    def _filter_student_combo(self, event):
-        # Enter/selection are handled by their own bindings, not here -
-        # this binding only narrows the dropdown list as the TA types.
-        if event.keysym in ("Return", "Down", "Up"):
-            return
-        typed = self._student_combo.get().strip().lower()
-        if not typed:
-            self._student_combo["values"] = self._student_display_values
-            return
-        filtered = [v for v in self._student_display_values if typed in v.lower()]
-        self._student_combo["values"] = filtered or self._student_display_values
+    def _on_student_picked(self, event):
+        self._student_search_var.set(self._student_picker.get())
+        self._lookup_student()
 
     def _lookup_student(self):
-        raw = self._student_combo.get().strip()
+        raw = self._student_search_var.get().strip()
         if not raw:
             return
-        # Accept either "Sid - Name" (from picking a dropdown entry) or a
-        # bare Sid typed and submitted directly without selecting.
+
+        # Accept "Sid - Name" (from the picker), a bare Sid typed
+        # directly, or a free-text name/partial name.
         sid_part = raw.split(" - ", 1)[0].strip()
-        try:
+        if sid_part.isdigit():
             sid = int(sid_part)
-        except ValueError:
-            messagebox.showwarning("Input Error", "Please enter or select a valid Student ID.")
-            return
+        else:
+            matches = [s for s in self._all_students if raw.lower() in s.name.lower()]
+            if len(matches) == 1:
+                sid = matches[0].sid
+            elif len(matches) > 1:
+                preview = ", ".join(f"{m.name} ({m.sid})" for m in matches[:8])
+                more = "..." if len(matches) > 8 else ""
+                self._student_info_label.config(
+                    text=f"Multiple matches for '{raw}' - be more specific, or use the picker: {preview}{more}"
+                )
+                self._student_risk_label.config(text="")
+                self._clear_student_results()
+                return
+            else:
+                self._student_info_label.config(text=f"No student matching '{raw}' found on this course's roster.")
+                self._student_risk_label.config(text="")
+                self._clear_student_results()
+                return
 
         summary = self.analytics.get_student_summary(self.course_name, sid)
         if summary is None:
             self._student_info_label.config(text=f"No student with Sid {sid} found on this course's roster.")
             self._student_risk_label.config(text="")
-            self._current_student_summary = None
-            self._student_table = None
-            for widget in self._student_table_frame.winfo_children():
-                widget.destroy()
-            for widget in self._student_chart_frame.winfo_children():
-                widget.destroy()
+            self._clear_student_results()
             return
 
         self._render_student_summary(summary)
+
+    def _clear_student_results(self):
+        self._current_student_summary = None
+        self._student_table = None
+        for widget in self._student_table_frame.winfo_children():
+            widget.destroy()
+        for widget in self._student_chart_frame.winfo_children():
+            widget.destroy()
 
     def _render_student_summary(self, summary):
         self._current_student_summary = summary
