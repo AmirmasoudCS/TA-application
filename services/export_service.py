@@ -132,6 +132,71 @@ class ExportService:
         logger.info("Exported PDF to %s (%d rows, font=%s)", filepath, len(rows), font_family)
         return filepath
 
+    def export_report_pdf(self, title: str, info_lines: Sequence[str], columns: Sequence[str],
+                           rows: Sequence[Sequence], filepath: str = None, base_name: str = "report",
+                           directory: Optional[str] = None, chart_image_path: Optional[str] = None) -> str:
+        """A more document-like PDF than export_to_pdf's bare table: a
+        title, a block of summary info lines, an optional embedded chart
+        image, then the bordered table. Built for per-student reports
+        (see AnalyticsWindow's Student Lookup tab) but generic enough for
+        any "title + summary + table (+ chart)" export - shares font
+        handling with export_to_pdf so both get the same bundled-font/
+        Unicode-fallback behavior (see export_to_pdf's docstring).
+
+        chart_image_path: an already-rendered image file (e.g. a
+        matplotlib figure saved to a temp PNG by the caller) to embed
+        between the info block and the table. This method only places the
+        image - it doesn't know how to build a chart itself, and the
+        caller is responsible for cleaning up the temp file afterward.
+        """
+        filepath = filepath or self.default_filename(base_name, "pdf", directory=directory)
+
+        pdf = FPDF(orientation="L", unit="mm", format="A4")
+        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.add_page()
+
+        font_family, supports_bold = self._configure_pdf_font(pdf)
+        needs_latin1_fallback = font_family == "Helvetica"
+
+        def clean(value) -> str:
+            text = "" if value is None else str(value)
+            return self._safe_pdf_text(text) if needs_latin1_fallback else text
+
+        pdf.set_font(font_family, style="B" if supports_bold else "", size=16)
+        pdf.cell(0, 10, clean(title), ln=1, align="C")
+        pdf.ln(2)
+
+        pdf.set_font(font_family, size=11)
+        for line in info_lines:
+            pdf.cell(0, 7, clean(line), ln=1)
+        pdf.ln(4)
+
+        if chart_image_path and os.path.isfile(chart_image_path):
+            usable_width = pdf.w - pdf.l_margin - pdf.r_margin
+            image_width = min(usable_width, 190)
+            x = (pdf.w - image_width) / 2
+            pdf.image(chart_image_path, x=x, w=image_width)
+            pdf.ln(6)
+
+        usable_width = pdf.w - pdf.l_margin - pdf.r_margin
+        col_count = max(len(columns), 1)
+        col_width = usable_width / col_count
+
+        pdf.set_font(font_family, style="B" if supports_bold else "", size=9)
+        for col in columns:
+            pdf.cell(col_width, 8, self._fit_text(pdf, clean(col), col_width), border=1)
+        pdf.ln()
+
+        pdf.set_font(font_family, size=8)
+        for row in rows:
+            for value in row:
+                pdf.cell(col_width, 7, self._fit_text(pdf, clean(value), col_width), border=1)
+            pdf.ln()
+
+        pdf.output(filepath)
+        logger.info("Exported report PDF to %s (%d rows, font=%s)", filepath, len(rows), font_family)
+        return filepath
+
     @staticmethod
     def _configure_pdf_font(pdf: FPDF) -> Tuple[str, bool]:
         """Looks for a .ttf file in config.FONTS_DIRECTORY and, if found,
