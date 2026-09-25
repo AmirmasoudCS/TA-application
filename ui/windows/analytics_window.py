@@ -34,6 +34,12 @@ Tabs:
                     ordering. Records with no UpdatedAt (from before that
                     column existed) sort to the end. Flags the student if
                     their average is below the At-Risk tab's threshold.
+                    "Export Report" (CSV/Excel/PDF Report/All, reusing
+                    ExportWindow) generates a per-student report: for PDF
+                    specifically this is a real document (title, summary
+                    info, the same progress chart embedded as an image,
+                    then the table) via ExportService.export_report_pdf,
+                    not just a bare table dump.
   At-Risk         - every roster student whose overall normalized average
                     is below an adjustable threshold (shared with Student
                     Lookup's flag), sorted lowest-first, with its own
@@ -52,6 +58,9 @@ proven safe for a non-modal popup with a real title bar (see popup.py's
 docstring on why chromeless + grab_set() was avoided).
 """
 import os
+import shutil
+import tempfile
+from datetime import datetime
 
 from tkinter import ttk, filedialog, messagebox, DoubleVar
 
@@ -62,6 +71,7 @@ from ui.widgets.popup import Popup
 from ui.widgets.table_view import TableView
 from ui.windows.export_window import ExportWindow
 from db.analytics_repository import AnalyticsRepository
+from services.export_service import ExportService
 from config import EXPORT_DIRECTORY
 from logging_setup import get_logger
 
@@ -74,6 +84,7 @@ class AnalyticsWindow(Popup):
                           resizable=True, custom_titlebar=True, modal=False)
         self.analytics = analytics_repository
         self.course_name = course_name
+        self.export_service = ExportService()
         self._open_figures = []  # every embedded figure, closed together on window close
         # Shared between the Student Lookup tab (flags a searched student
         # if below this) and the At-Risk tab (lists everyone below this) -
@@ -347,6 +358,7 @@ class AnalyticsWindow(Popup):
         self._student_combo.bind("<<ComboboxSelected>>", lambda e: self._lookup_student())
         self._student_combo.bind("<Return>", lambda e: self._lookup_student())
         ttk.Button(header, text="Search", command=self._lookup_student).pack(side="left", padx=5)
+        ttk.Button(header, text="Export Report", command=self._open_student_report_export).pack(side="left", padx=(20, 0))
 
         self._student_info_label = ttk.Label(tab, text="Search for a student above to see their record.")
         self._student_info_label.grid(row=1, column=0, sticky="w", padx=10, pady=(0, 2))
@@ -361,6 +373,12 @@ class AnalyticsWindow(Popup):
 
         self._student_chart_frame = ttk.Frame(tab)
         self._student_chart_frame.grid(row=5, column=0, sticky="nsew", padx=10, pady=(0, 10))
+
+        # Set once a search succeeds; _open_student_report_export checks
+        # these before doing anything, so "Export Report" with nothing
+        # searched yet fails clearly instead of exporting stale/empty data.
+        self._current_student_summary = None
+        self._student_table = None
 
     def _filter_student_combo(self, event):
         # Enter/selection are handled by their own bindings, not here -
@@ -391,6 +409,8 @@ class AnalyticsWindow(Popup):
         if summary is None:
             self._student_info_label.config(text=f"No student with Sid {sid} found on this course's roster.")
             self._student_risk_label.config(text="")
+            self._current_student_summary = None
+            self._student_table = None
             for widget in self._student_table_frame.winfo_children():
                 widget.destroy()
             for widget in self._student_chart_frame.winfo_children():
@@ -400,6 +420,8 @@ class AnalyticsWindow(Popup):
         self._render_student_summary(summary)
 
     def _render_student_summary(self, summary):
+        self._current_student_summary = summary
+
         avg_text = f"{summary.average:.2f}" if summary.average is not None else "N/A"
         self._student_info_label.config(
             text=f"{summary.name} (Sid {summary.sid}) | Overall average: {avg_text} "
@@ -419,6 +441,7 @@ class AnalyticsWindow(Popup):
             widget.destroy()
         table = TableView(self._student_table_frame)
         table.frame.grid(row=0, column=0, sticky="nsew")
+        self._student_table = table
 
         def fmt(value, suffix=""):
             return f"{value:.2f}{suffix}" if isinstance(value, (int, float)) else "-"
@@ -439,10 +462,22 @@ class AnalyticsWindow(Popup):
         for widget in self._student_chart_frame.winfo_children():
             widget.destroy()
 
-        plotted = [r for r in summary.records if r.normalized is not None]
-        if not plotted:
+        fig = self._build_student_progress_figure(summary)
+        if fig is None:
             ttk.Label(self._student_chart_frame, text="No numeric scores to chart yet.").grid(row=0, column=0)
             return
+
+        self._embed_chart(self._student_chart_frame, fig, f"{summary.sid}_{summary.name}_progress".replace(" ", "_"))
+
+    def _build_student_progress_figure(self, summary):
+        """Builds (but doesn't embed) the student's progress-vs-class-
+        average figure. Split out from _render_student_chart so the exact
+        same chart can also be saved to a temp image and embedded in the
+        PDF report (_generate_student_report_pdf) without duplicating the
+        plotting logic. Returns None if there's nothing numeric to plot."""
+        plotted = [r for r in summary.records if r.normalized is not None]
+        if not plotted:
+            return None
 
         # Chronological order (by when each was graded) reads as an actual
         # progress timeline; records with no timestamp (pre-dating the
@@ -474,8 +509,98 @@ class AnalyticsWindow(Popup):
         legend = ax.legend(facecolor=self.theme.CARD, edgecolor=self.theme.BORDER)
         for text in legend.get_texts():
             text.set_color(self.theme.FG)
+        return fig
 
-        self._embed_chart(self._student_chart_frame, fig, f"{summary.sid}_{summary.name}_progress".replace(" ", "_"))
+    # ---- Student report export ----
+    def _open_student_report_export(self):
+        if not self._current_student_summary:
+            messagebox.showinfo("No Student Selected", "Search for a student first.")
+            return
+        ExportWindow(self, self.theme, self._on_student_report_export_chosen, course_name=self.course_name)
+
+    def _on_student_report_export_chosen(self, format_key: str, folder: str):
+        summary = self._current_student_summary
+        base_name = f"{summary.sid}_{summary.name}_report".replace(" ", "_")
+
+        def do_csv():
+            return self._student_table.export_csv(base_name=base_name, directory=folder)
+
+        def do_excel():
+            return self._student_table.export_excel(base_name=base_name, directory=folder)
+
+        def do_pdf_report():
+            return self._generate_student_report_pdf(summary, folder, base_name)
+
+        # The PDF option is always the full report (title, summary info,
+        # embedded progress chart, then the table) rather than the plain
+        # bordered-table dump TableView.export_pdf would otherwise give -
+        # that's the whole point of "report" over a raw export.
+        exporters = {
+            "csv": [("CSV", do_csv)],
+            "excel": [("Excel", do_excel)],
+            "pdf": [("PDF Report", do_pdf_report)],
+            "all": [("CSV", do_csv), ("Excel", do_excel), ("PDF Report", do_pdf_report)],
+        }.get(format_key, [])
+
+        written, errors = [], []
+        for label, export_fn in exporters:
+            try:
+                path = export_fn()
+                written.append(f"{label}: {path}")
+            except Exception as e:
+                logger.exception("%s export failed for student report (sid=%s)", label, summary.sid)
+                errors.append(f"{label}: {e}")
+
+        if written:
+            messagebox.showinfo("Export Complete", "Saved:\n\n" + "\n".join(written))
+        if errors:
+            messagebox.showerror("Some Exports Failed", "\n".join(errors))
+
+    def _generate_student_report_pdf(self, summary, folder: str, base_name: str) -> str:
+        """Builds the actual report PDF: renders the same progress chart
+        shown on-screen to a temp PNG (cleaned up afterward), then hands
+        everything to ExportService.export_report_pdf for layout."""
+        fig = self._build_student_progress_figure(summary)
+        chart_path = None
+        tmp_dir = None
+        if fig is not None:
+            tmp_dir = tempfile.mkdtemp(prefix="ta_app_report_")
+            chart_path = os.path.join(tmp_dir, "chart.png")
+            fig.savefig(chart_path, facecolor=fig.get_facecolor(), bbox_inches="tight", dpi=150)
+            plt.close(fig)  # this figure is never embedded on-screen, so it isn't in self._open_figures
+
+        try:
+            avg_text = f"{summary.average:.2f}%" if summary.average is not None else "N/A"
+            threshold = self._at_risk_threshold_var.get()
+            info_lines = [
+                f"Course: {self.course_name}",
+                f"Student: {summary.name}    Sid: {summary.sid}",
+                f"Overall Average (normalized): {avg_text}",
+                f"Assessments Graded: {summary.assessments_graded}/{summary.assessments_total}",
+                f"Report Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            ]
+            if summary.average is not None and summary.average < threshold:
+                info_lines.append(f"** Flagged At-Risk (below {threshold:.0f}% threshold) **")
+
+            def fmt(value):
+                return f"{value:.2f}" if isinstance(value, (int, float)) else "-"
+
+            columns = ["Assessment", "Score", "Calculated", "Comment", "Grader", "Last Modified", "Vs Class Avg"]
+            rows = []
+            for r in summary.records:
+                delta = r.vs_class_average
+                delta_text = "N/A" if delta is None else (f"+{delta:.2f}" if delta >= 0 else f"{delta:.2f}")
+                rows.append([r.table_suffix, fmt(r.score), fmt(r.calculated), r.comment,
+                             r.grader_name, r.updated_at or "-", delta_text])
+
+            return self.export_service.export_report_pdf(
+                title=f"Student Report - {summary.name}",
+                info_lines=info_lines, columns=columns, rows=rows,
+                chart_image_path=chart_path, base_name=base_name, directory=folder,
+            )
+        finally:
+            if tmp_dir:
+                shutil.rmtree(tmp_dir, ignore_errors=True)
 
     # ---- At-Risk ----
     def _build_at_risk_tab(self, tab):
