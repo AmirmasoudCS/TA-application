@@ -431,3 +431,21 @@ class Theme:
         window.option_add("*TCombobox*Listbox.selectBackground", self.PURPLE)
         window.option_add("*TCombobox*Listbox.selectForeground", self.TEXT_LIGHT)
         window.option_add("*TCombobox*Listbox.font", "{Segoe UI} 10")
+
+        # Spinbox (e.g. the At-Risk tab's threshold control) - same field
+        # colors as TEntry/TCombobox for a consistent look, plus themed
+        # up/down arrow buttons instead of the plain default ones.
+        self.style.configure(
+            "TSpinbox", fieldbackground=self.FIELD_BG, foreground=self.FG,
+            background=self.PURPLE, arrowcolor=self.TEXT_LIGHT,
+            bordercolor=self.BORDER, lightcolor=self.BORDER, darkcolor=self.BORDER,
+            padding=4, font=("Segoe UI", 10),
+        )
+        self.style.map(
+            "TSpinbox",
+            fieldbackground=[("disabled", self.CARD), ("!disabled", self.FIELD_BG)],
+            foreground=[("disabled", "#777777"), ("!disabled", self.FG)],
+            background=[("active", self.PURPLE_HOVER), ("!disabled", self.PURPLE)],
+            arrowcolor=[("!disabled", self.TEXT_LIGHT)],
+            bordercolor=[("focus", self.PURPLE), ("!focus", self.BORDER)],
+        )
