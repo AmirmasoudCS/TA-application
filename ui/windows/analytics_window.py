@@ -337,25 +337,28 @@ class AnalyticsWindow(Popup):
 
     # ---- Student Lookup ----
     def _build_student_tab(self, tab):
-        tab.grid_rowconfigure(1, weight=0)
         tab.grid_rowconfigure(2, weight=0)
-        tab.grid_rowconfigure(4, weight=1)
+        tab.grid_rowconfigure(3, weight=0)
         tab.grid_rowconfigure(5, weight=1)
+        tab.grid_rowconfigure(6, weight=1)
         tab.grid_columnconfigure(0, weight=1)
 
         self._all_students = self.analytics.list_students(self.course_name)
         self._student_display_values = [f"{s.sid} - {s.name}" for s in self._all_students]
 
-        header = ttk.Frame(tab)
-        header.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 5))
-        ttk.Label(header, text="Search (Sid or name): ").pack(side="left")
+        # Split across two rows rather than one long horizontal line - at
+        # the window's default width, cramming search + picker + export
+        # into a single row clipped the last button off the edge.
+        search_row = ttk.Frame(tab)
+        search_row.grid(row=0, column=0, sticky="ew", padx=10, pady=(10, 2))
+        ttk.Label(search_row, text="Search (Sid or name): ").pack(side="left")
         self._student_search_var = StringVar()
-        search_entry = ttk.Entry(header, textvariable=self._student_search_var, width=25)
+        search_entry = ttk.Entry(search_row, textvariable=self._student_search_var, width=25)
         search_entry.pack(side="left", padx=5)
         search_entry.bind("<Return>", lambda e: self._lookup_student())
-        ttk.Button(header, text="Search", command=self._lookup_student).pack(side="left", padx=5)
+        ttk.Button(search_row, text="Search", command=self._lookup_student).pack(side="left", padx=5)
 
-        ttk.Label(header, text="  or pick: ").pack(side="left")
+        ttk.Label(search_row, text="   or pick: ").pack(side="left")
         # Read-only, not editable: an editable Combobox whose 'values' get
         # rewritten on every keystroke (an earlier version of this) is a
         # genuinely fragile Tk pattern - backspace/arrow keys stop working
@@ -364,26 +367,28 @@ class AnalyticsWindow(Popup):
         # editing happening in it at all - only clicking or arrowing
         # through a fixed list, which is standard and reliable.
         self._student_picker = ttk.Combobox(
-            header, values=self._student_display_values, state="readonly", width=28,
+            search_row, values=self._student_display_values, state="readonly", width=28,
         )
         self._student_picker.pack(side="left", padx=5)
         self._student_picker.bind("<<ComboboxSelected>>", self._on_student_picked)
 
-        ttk.Button(header, text="Export Report", command=self._open_student_report_export).pack(side="left", padx=(20, 0))
+        action_row = ttk.Frame(tab)
+        action_row.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 5))
+        ttk.Button(action_row, text="Export Report", command=self._open_student_report_export).pack(side="left")
 
         self._student_info_label = ttk.Label(tab, text="Search for a student above to see their record.")
-        self._student_info_label.grid(row=1, column=0, sticky="w", padx=10, pady=(0, 2))
+        self._student_info_label.grid(row=2, column=0, sticky="w", padx=10, pady=(0, 2))
 
         self._student_risk_label = ttk.Label(tab, text="", style="AtRisk.TLabel")
-        self._student_risk_label.grid(row=2, column=0, sticky="w", padx=10, pady=(0, 10))
+        self._student_risk_label.grid(row=3, column=0, sticky="w", padx=10, pady=(0, 10))
 
         self._student_table_frame = ttk.Frame(tab)
-        self._student_table_frame.grid(row=4, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        self._student_table_frame.grid(row=5, column=0, sticky="nsew", padx=10, pady=(0, 10))
         self._student_table_frame.grid_rowconfigure(0, weight=1)
         self._student_table_frame.grid_columnconfigure(0, weight=1)
 
         self._student_chart_frame = ttk.Frame(tab)
-        self._student_chart_frame.grid(row=5, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        self._student_chart_frame.grid(row=6, column=0, sticky="nsew", padx=10, pady=(0, 10))
 
         # Set once a search succeeds; _open_student_report_export checks
         # these before doing anything, so "Export Report" with nothing
