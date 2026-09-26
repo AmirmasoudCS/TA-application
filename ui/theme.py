@@ -402,3 +402,32 @@ class Theme:
                 ]}),
             ]}),
         ])
+
+        # The combobox field itself is a normal ttk widget and themes like
+        # everything else above. Its dropdown list, though, is a raw Tk
+        # Listbox created behind the scenes when the dropdown opens - not
+        # a ttk widget at all, so ttk.Style can't reach it. The only way
+        # to theme it is Tk's older *option* mechanism, which is why this
+        # uses window.option_add(...) instead of self.style.configure(...)
+        # like everything else here. Re-applied on every theme change so
+        # switching themes updates the dropdown list too, not just the
+        # field.
+        self.style.configure(
+            "TCombobox", fieldbackground=self.FIELD_BG, foreground=self.FG,
+            background=self.PURPLE, arrowcolor=self.TEXT_LIGHT,
+            bordercolor=self.BORDER, lightcolor=self.BORDER, darkcolor=self.BORDER,
+            padding=4, font=("Segoe UI", 10),
+        )
+        self.style.map(
+            "TCombobox",
+            fieldbackground=[("readonly", self.FIELD_BG), ("disabled", self.CARD)],
+            foreground=[("readonly", self.FG), ("disabled", "#777777")],
+            background=[("active", self.PURPLE_HOVER), ("!disabled", self.PURPLE)],
+            arrowcolor=[("!disabled", self.TEXT_LIGHT)],
+            bordercolor=[("focus", self.PURPLE), ("!focus", self.BORDER)],
+        )
+        window.option_add("*TCombobox*Listbox.background", self.FIELD_BG)
+        window.option_add("*TCombobox*Listbox.foreground", self.FG)
+        window.option_add("*TCombobox*Listbox.selectBackground", self.PURPLE)
+        window.option_add("*TCombobox*Listbox.selectForeground", self.TEXT_LIGHT)
+        window.option_add("*TCombobox*Listbox.font", "{Segoe UI} 10")
