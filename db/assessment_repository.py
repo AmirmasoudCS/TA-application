@@ -30,9 +30,14 @@ class AssessmentRepository:
     def __init__(self, connection: Connection):
         self.conn = connection
 
-    def add_or_replace_item(self, table_name: str, sid: int, score, comment: str = "", grader_id: Optional[int] = None) -> None:
+    def add_or_replace_item(self, table_name: str, sid: int, score, comment: str = "", grader_id: Optional[int] = None, updated_at: Optional[str] = None) -> None:
+        """updated_at: normally left as None, which stamps "now" - the
+        one exception is SyncService.import_file(), which passes the
+        ORIGINAL grading timestamp from the incoming sync file, so an
+        imported score doesn't look like it was just entered this second.
+        """
         comment = comment if comment != "" else "-"
-        updated_at = datetime.now().isoformat(timespec="seconds")
+        updated_at = updated_at or datetime.now().isoformat(timespec="seconds")
         self.conn.execute(
             f"INSERT OR REPLACE INTO '{table_name}'(Sid, Score, Comment, GraderId, UpdatedAt) "
             f"VALUES(?, ?, ?, ?, ?)",
