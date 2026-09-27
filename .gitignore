@@ -226,6 +226,7 @@ Courses/*
 Courses/
 DSA4042s.txt
 data/rosters/*
+data/sync/
 
 # Current TA
 settings/current_ta.txt
