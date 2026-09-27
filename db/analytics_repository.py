@@ -108,15 +108,10 @@ class AnalyticsRepository:
         self.tas = tas
 
     def _assessment_suffixes(self, course_name: str) -> List[str]:
-        """Strips the course prefix off each full table name, the same
-        way MainWindow._finalize_course cleans up column names - so
-        callers work with the short names TAs actually type ("Quiz1"),
-        not the internal 'COURSEQuiz1' form."""
-        full_names = self.courses.list_assessment_tables(course_name)
-        return [
-            name[len(course_name):] if name.startswith(course_name) else name
-            for name in full_names
-        ]
+        """Thin wrapper kept for readability at call sites - delegates to
+        CourseRepository.list_assessment_suffixes(), which SyncService
+        also uses, so the stripping logic lives in exactly one place."""
+        return self.courses.list_assessment_suffixes(course_name)
 
     @staticmethod
     def _normalize(score, base_grade: Optional[float]) -> Optional[float]:
