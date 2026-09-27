@@ -37,10 +37,19 @@ THEME_CONFIG_PATH = os.path.join(SETTINGS_DIRECTORY, "theme_config.txt")
 # real Unicode font is provided here - see ExportService.export_to_pdf.
 FONTS_DIRECTORY = os.path.join(BASE_DIRECTORY, "assets", "fonts")
 
+# Default local folder for Sync Out/In (see services/sync_service.py and
+# ui/windows/sync_window.py). This is just a sensible default that always
+# exists on this machine - a TA can (and typically will) point Sync Out/In
+# at wherever their group's actual shared location is instead (a Dropbox
+# folder, a USB drive, etc.), the same way ExportWindow's folder field
+# works.
+SYNC_DIRECTORY = os.path.join(BASE_DIRECTORY, "data", "sync")
+
 # Remembers which TA is using this install, so they're only asked once
 # instead of every launch. Purely local attribution, not an account system
 # — see db/ta_repository.py and ui/windows/ta_select_window.py.
 CURRENT_TA_PATH = os.path.join(SETTINGS_DIRECTORY, "current_ta.txt")
 
-for _directory in (ROSTER_DIRECTORY, EXPORT_DIRECTORY, SCORE_IMPORT_DIRECTORY, FONTS_DIRECTORY, LOG_DIRECTORY, SETTINGS_DIRECTORY):
+for _directory in (ROSTER_DIRECTORY, EXPORT_DIRECTORY, SCORE_IMPORT_DIRECTORY, FONTS_DIRECTORY,
+                   SYNC_DIRECTORY, LOG_DIRECTORY, SETTINGS_DIRECTORY):
     os.makedirs(_directory, exist_ok=True)
