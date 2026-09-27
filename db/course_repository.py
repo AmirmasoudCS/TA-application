@@ -113,6 +113,18 @@ class CourseRepository:
             logger.info("No AssessmentInfo table yet for course %s", course_name)
             return []
 
+    def list_assessment_suffixes(self, course_name: str) -> List[str]:
+        """Same as list_assessment_tables() but with the course name
+        prefix stripped off each entry, e.g. 'COURSEQuiz1' -> 'Quiz1' - the
+        short names TAs actually type ("Quiz1"), not the internal full
+        table name. Used by AnalyticsRepository and SyncService, which
+        both need this same short form."""
+        full_names = self.list_assessment_tables(course_name)
+        return [
+            name[len(course_name):] if name.startswith(course_name) else name
+            for name in full_names
+        ]
+
     def finalize(self, course_name: str):
         """Builds a wide table: Sid, SName, <assessment1>_Score, <assessment2>_Score, ..."""
         tables = self.list_assessment_tables(course_name)
