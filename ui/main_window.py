@@ -17,12 +17,13 @@ import os
 from tkinter import IntVar, StringVar, Tk, Toplevel, Frame
 from tkinter import font, messagebox, ttk
 
-from config import DB_PATH, CURRENT_TA_PATH
+from config import DB_PATH, CURRENT_TA_PATH, SYNC_DIRECTORY
 from db.database import Database
 from services.roster_import_service import RosterImportService
 from services.export_service import ExportService
 from services.score_import_service import ScoreImportService
 from services.stats_service import StatsService
+from services.sync_service import SyncService
 from ui.theme import Theme
 from ui.widgets.table_view import TableView
 from ui.windows.course_setup_window import start_course_setup
@@ -33,6 +34,7 @@ from ui.windows.settings_window import SettingsWindow
 from ui.windows.ta_select_window import TASelectWindow
 from ui.windows.score_import_window import ScoreImportWindow
 from ui.windows.export_window import ExportWindow
+from ui.windows.sync_window import SyncWindow
 from logging_setup import get_logger
 
 logger = get_logger("ui.main_window")
@@ -70,6 +72,7 @@ class MainWindow:
         self.roster_service = RosterImportService()
         self.export_service = ExportService()
         self.score_import_service = ScoreImportService()
+        self.sync_service = SyncService(self.db, SYNC_DIRECTORY)
 
         self.course_name = None
         self.filename = None
@@ -594,6 +597,13 @@ class MainWindow:
             on_ta_changed=on_ta_changed,
         )
 
+    def _open_sync(self):
+        self.toggle_escape_menu()
+        if not self.course_name:
+            messagebox.showwarning("Input Error", "Please set up a course first.")
+            return
+        SyncWindow(self.root, self.theme, self.sync_service, self.course_name, self.current_ta_name)
+
     # ---- escape menu ----
     def toggle_escape_menu(self, event=None):
         if self.esc_menu_open:
@@ -612,7 +622,7 @@ class MainWindow:
         menu.configure(bg=self.theme.PURPLE, highlightthickness=3,
                         highlightbackground="black", highlightcolor="black")
         menu.attributes("-topmost", True)
-        menu.geometry("260x340+0+0")
+        menu.geometry("260x400+0+0")
         self._center_over_root(menu)
 
         ttk.Label(menu, text="Menu", style="MenuLabel.TLabel").grid(row=0, column=1, pady=5, padx=5, sticky="n")
@@ -625,6 +635,11 @@ class MainWindow:
         settings_border = Frame(menu, bg="black", bd=0)
         settings_border.grid(row=2, column=1, pady=5, padx=5, sticky="n")
         ttk.Button(settings_border, text="Settings", command=self._open_settings,
+                   style="MenuButtons.TButton").grid(row=0, column=0, pady=2, padx=2)
+
+        sync_border = Frame(menu, bg="black", bd=0)
+        sync_border.grid(row=3, column=1, pady=5, padx=5, sticky="n")
+        ttk.Button(sync_border, text="Sync", command=self._open_sync,
                    style="MenuButtons.TButton").grid(row=0, column=0, pady=2, padx=2)
 
         self.esc_menu_open = True
