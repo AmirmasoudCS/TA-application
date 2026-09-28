@@ -50,6 +50,11 @@ SYNC_DIRECTORY = os.path.join(BASE_DIRECTORY, "data", "sync")
 # — see db/ta_repository.py and ui/windows/ta_select_window.py.
 CURRENT_TA_PATH = os.path.join(SETTINGS_DIRECTORY, "current_ta.txt")
 
+# Credit line shown in the Esc menu footer and Settings' About section.
+# Kept here so both places read from one source and can't drift apart.
+APP_AUTHOR = "Amirmasoud Mohammadian"
+APP_CREDIT = f"Created by {APP_AUTHOR}"
+
 for _directory in (ROSTER_DIRECTORY, EXPORT_DIRECTORY, SCORE_IMPORT_DIRECTORY, FONTS_DIRECTORY,
                    SYNC_DIRECTORY, LOG_DIRECTORY, SETTINGS_DIRECTORY):
     os.makedirs(_directory, exist_ok=True)
