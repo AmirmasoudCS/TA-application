@@ -17,7 +17,7 @@ import os
 from tkinter import IntVar, StringVar, Tk, Toplevel, Frame
 from tkinter import font, messagebox, ttk
 
-from config import DB_PATH, CURRENT_TA_PATH, SYNC_DIRECTORY
+from config import DB_PATH, CURRENT_TA_PATH, SYNC_DIRECTORY, APP_CREDIT
 from db.database import Database
 from services.roster_import_service import RosterImportService
 from services.export_service import ExportService
@@ -641,6 +641,13 @@ class MainWindow:
         sync_border.grid(row=3, column=1, pady=5, padx=5, sticky="n")
         ttk.Button(sync_border, text="Sync", command=self._open_sync,
                    style="MenuButtons.TButton").grid(row=0, column=0, pady=2, padx=2)
+
+        # Row 4 takes all the leftover height so the credit sits at the
+        # bottom edge of the menu instead of crowding the buttons.
+        menu.rowconfigure(4, weight=1)
+        ttk.Label(menu, text=APP_CREDIT, style="MenuCredit.TLabel").grid(
+            row=4, column=0, columnspan=3, pady=(0, 6), sticky="s"
+        )
 
         self.esc_menu_open = True
 
