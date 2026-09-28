@@ -1,5 +1,6 @@
 """
-Settings popup: theme picker + "change course" form + "change grader" form.
+Settings popup: theme picker + "change course" form + "change grader" form
++ a small About section with the app's credit line.
 
 Extracted from TAapp.py's openSettingsMenu(). Theme switching, course
 changes, and grader changes are all delegated to callbacks so this window
@@ -13,6 +14,7 @@ from tkinter import ttk
 
 from ui.widgets.popup import Popup
 from db.ta_repository import TARepository
+from config import APP_CREDIT
 
 _THEME_LABELS = [
     ("default", "Default (Purple)"),
@@ -55,6 +57,7 @@ class SettingsWindow(Popup):
         self._build_course_section()
         if self.ta_repository is not None:
             self._build_grader_section()
+        self._build_about_section()
 
         ttk.Button(self.content, text="Close Settings", command=self.close).grid(
             row=7, column=0, columnspan=2, padx=5, pady=5
@@ -65,6 +68,16 @@ class SettingsWindow(Popup):
             parent.attributes("-disabled", True)
         except Exception:
             pass
+
+    def _build_about_section(self):
+        about_frame = ttk.LabelFrame(
+            self.content, text="About", padding=8, style="Settings.TLabelframe"
+        )
+        about_frame.grid(row=6, column=0, columnspan=2, padx=10, pady=(5, 5), sticky="ew")
+        about_frame.columnconfigure(0, weight=1)
+        ttk.Label(about_frame, text=APP_CREDIT, style="Credit.TLabel", anchor="center").grid(
+            row=0, column=0, sticky="ew"
+        )
 
     def _build_theme_section(self):
         theme_frame = ttk.LabelFrame(
