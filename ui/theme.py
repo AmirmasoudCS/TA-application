@@ -370,6 +370,18 @@ class Theme:
             "AtRisk.TLabel", background=self.BG, foreground="#dc2626",
             font=("Segoe UI", 10, "bold"),
         )
+        # Credit line styles: deliberately small and not bold, so the
+        # author credit is visible without competing with real controls.
+        # MenuCredit sits on the Esc menu's accent-colored background;
+        # Credit sits on the normal window background (Settings' About).
+        self.style.configure(
+            "MenuCredit.TLabel", background=self.PURPLE, foreground=self.MENU_LABEL,
+            font=("Segoe UI", 8),
+        )
+        self.style.configure(
+            "Credit.TLabel", background=self.BG, foreground=self.FG,
+            font=("Segoe UI", 9),
+        )
         self.style.configure(
             "TRadiobutton", background=self.BG, foreground=self.FG,
             font=("Segoe UI", 10, "bold"), focuscolor=self.BG,
