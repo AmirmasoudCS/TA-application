@@ -100,15 +100,20 @@ class SettingsWindow(Popup):
             self.content, text="Change Course", padding=10, style="Settings.TLabelframe"
         )
         course_frame.grid(row=1, column=0, columnspan=2, padx=10, pady=10, sticky="ew")
+        course_frame.columnconfigure(0, weight=1)
 
-        ttk.Label(course_frame, text="Enter new course name: ").grid(row=0, column=0, sticky="w", pady=3)
+        ttk.Label(course_frame, text="Enter new course name: ", anchor="center").grid(
+            row=0, column=0, sticky="ew", pady=3
+        )
         new_course_var = StringVar()
-        course_entry = ttk.Entry(course_frame, textvariable=new_course_var, width=30)
+        course_entry = ttk.Entry(course_frame, textvariable=new_course_var, width=30, justify="center")
         course_entry.grid(row=1, column=0, pady=3)
 
-        ttk.Label(course_frame, text="Enter filename: ").grid(row=2, column=0, sticky="w", pady=3)
+        ttk.Label(course_frame, text="Enter filename: ", anchor="center").grid(
+            row=2, column=0, sticky="ew", pady=3
+        )
         new_filename_var = StringVar()
-        filename_entry = ttk.Entry(course_frame, textvariable=new_filename_var, width=30)
+        filename_entry = ttk.Entry(course_frame, textvariable=new_filename_var, width=30, justify="center")
         filename_entry.grid(row=3, column=0, pady=3)
 
         course_entry.bind("<Return>", lambda e=None: filename_entry.focus_set())
