@@ -35,6 +35,7 @@ from ui.windows.ta_select_window import TASelectWindow
 from ui.windows.score_import_window import ScoreImportWindow
 from ui.windows.export_window import ExportWindow
 from ui.windows.sync_window import SyncWindow
+from ui.windows.shortcuts_window import ShortcutsWindow
 from logging_setup import get_logger
 
 logger = get_logger("ui.main_window")
@@ -604,6 +605,10 @@ class MainWindow:
             return
         SyncWindow(self.root, self.theme, self.sync_service, self.course_name, self.current_ta_name)
 
+    def _open_shortcuts(self):
+        self.toggle_escape_menu()
+        ShortcutsWindow(self.root, self.theme)
+
     # ---- escape menu ----
     def toggle_escape_menu(self, event=None):
         if self.esc_menu_open:
@@ -622,7 +627,7 @@ class MainWindow:
         menu.configure(bg=self.theme.PURPLE, highlightthickness=3,
                         highlightbackground="black", highlightcolor="black")
         menu.attributes("-topmost", True)
-        menu.geometry("260x400+0+0")
+        menu.geometry("260x460+0+0")
         self._center_over_root(menu)
 
         ttk.Label(menu, text="Menu", style="MenuLabel.TLabel").grid(row=0, column=1, pady=5, padx=5, sticky="n")
@@ -642,11 +647,16 @@ class MainWindow:
         ttk.Button(sync_border, text="Sync", command=self._open_sync,
                    style="MenuButtons.TButton").grid(row=0, column=0, pady=2, padx=2)
 
-        # Row 4 takes all the leftover height so the credit sits at the
+        shortcuts_border = Frame(menu, bg="black", bd=0)
+        shortcuts_border.grid(row=4, column=1, pady=5, padx=5, sticky="n")
+        ttk.Button(shortcuts_border, text="Shortcuts", command=self._open_shortcuts,
+                   style="MenuButtons.TButton").grid(row=0, column=0, pady=2, padx=2)
+
+        # Row 5 takes all the leftover height so the credit sits at the
         # bottom edge of the menu instead of crowding the buttons.
-        menu.rowconfigure(4, weight=1)
+        menu.rowconfigure(5, weight=1)
         ttk.Label(menu, text=APP_CREDIT, style="MenuCredit.TLabel").grid(
-            row=4, column=0, columnspan=3, pady=(0, 6), sticky="s"
+            row=5, column=0, columnspan=3, pady=(0, 6), sticky="s"
         )
 
         self.esc_menu_open = True
