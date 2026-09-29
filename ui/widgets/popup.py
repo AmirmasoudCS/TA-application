@@ -8,6 +8,12 @@ histogram popup in showHistogram() — same drag-to-move title bar, same
 centering-over-parent logic, copy-pasted each time. This class factors
 that out once.
 
+A themed outline (highlightthickness/highlightbackground) was added so
+every popup gets a visible border in the active theme's accent color,
+rather than blending into the OS's default window edge - this applies
+uniformly to every Popup subclass (chromeless or native-titlebar) since
+it's set once here rather than per-window.
+
 Subclasses/callers:
 - override `build_content(content_frame)` to add widgets, OR
 - just use `Popup` directly and call `.content` to add widgets themselves.
@@ -36,6 +42,13 @@ class Popup(Toplevel):
             self.resizable(False, False)
 
         self.configure(bg=theme.BG)
+        # Themed outline: a colored border around the whole popup so it
+        # reads as clearly "part of this app" against any OS/desktop
+        # background, using the active theme's accent color rather than
+        # the OS's default window edge. highlightthickness/highlightcolor
+        # work the same way regardless of custom_titlebar, so this covers
+        # every popup uniformly.
+        self.configure(highlightthickness=2, highlightbackground=theme.PURPLE, highlightcolor=theme.PURPLE)
         self.grid_columnconfigure(0, weight=1)
 
         self.title_bar = None
