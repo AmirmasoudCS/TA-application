@@ -396,6 +396,17 @@ class Theme:
         # Checkbutton (e.g. the Attendance checklist) - same treatment as
         # TRadiobutton above: themed text color and a themed check-mark
         # box instead of the plain black-on-white OS default.
+        #
+        # Checkbutton indicator theming is genuinely finicky across Tk
+        # versions - clam's exact style option names for it have varied,
+        # and "indicatorforeground" (tried in an earlier version of this)
+        # turned out not to reliably change anything, leaving the checked
+        # state only distinguishable by a subtle fill-color change that
+        # was easy to miss. Setting both indicatorcolor and
+        # indicatorbackground here is a defensive measure - whichever one
+        # this Tk version actually honors gets the right value, and
+        # setting an option name a given version doesn't use is silently
+        # harmless rather than an error.
         self.style.configure(
             "TCheckbutton", background=self.BG, foreground=self.FG,
             font=("Segoe UI", 10), focuscolor=self.BG,
@@ -405,7 +416,7 @@ class Theme:
             background=[("active", self.BG)],
             foreground=[("disabled", self.DISABLED), ("!disabled", self.FG)],
             indicatorcolor=[("selected", self.PURPLE), ("!selected", self.FIELD_BG)],
-            indicatorforeground=[("selected", self.TEXT_LIGHT)],
+            indicatorbackground=[("selected", self.PURPLE), ("!selected", self.FIELD_BG)],
         )
         self.style.configure(
             "TNotebook", background=self.BG, borderwidth=0,
