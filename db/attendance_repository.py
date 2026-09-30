@@ -111,3 +111,23 @@ class AttendanceRepository:
         )
         self.conn.commit()
         logger.info("Marked Sid %s absent for session %s in %s", sid, session_id, course_name)
+
+    def rename_session(self, course_name: str, session_id: int, new_name: str) -> None:
+        sessions_table = f"{course_name}Sessions"
+        self.conn.execute(
+            f"UPDATE '{sessions_table}' SET SessionName = ? WHERE SessionId = ?",
+            (new_name, session_id),
+        )
+        self.conn.commit()
+        logger.info("Renamed session %s to '%s' in %s", session_id, new_name, course_name)
+
+    def delete_session(self, course_name: str, session_id: int) -> None:
+        """Deletes the session itself. Its attendance rows are removed
+        automatically via the ON DELETE CASCADE set up on the Attendance
+        table's SessionId foreign key in create_tables() - no separate
+        cleanup query needed here, since Connection already runs with
+        PRAGMA foreign_keys = ON."""
+        sessions_table = f"{course_name}Sessions"
+        self.conn.execute(f"DELETE FROM '{sessions_table}' WHERE SessionId = ?", (session_id,))
+        self.conn.commit()
+        logger.info("Deleted session %s from %s (its attendance rows cascade-deleted)", session_id, course_name)
