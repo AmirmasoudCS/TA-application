@@ -51,7 +51,7 @@ class ExportWindow(Popup):
         format_key is one of 'csv', 'excel', 'pdf', 'all'.
         course_name: used to build the default per-course export folder;
         pass None to fall back to the plain EXPORT_DIRECTORY."""
-        super().__init__(parent, "Export", theme, width=420, height=320,
+        super().__init__(parent, "Export", theme, width=420, height=380,
                           custom_titlebar=True, modal=False)
         self.on_export = on_export
         self.content.grid_columnconfigure(0, weight=1)
