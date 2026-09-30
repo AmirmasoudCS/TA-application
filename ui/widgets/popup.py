@@ -171,3 +171,62 @@ class Popup(Toplevel):
         finally:
             if had_grab and self.winfo_exists():
                 self.grab_set()
+
+    def confirm(self, title: str, message: str) -> bool:
+        """A themed yes/no dialog, for when a popup needs to confirm a
+        destructive action (e.g. deleting an attendance session).
+
+        Deliberately NOT messagebox.askyesno(): a native messagebox isn't
+        itself marked -topmost, so when it's opened from a chromeless
+        popup that IS -topmost (e.g. AttendanceWindow), the confirmation
+        can render BEHIND its own parent instead of in front of it -
+        "always on top" doesn't automatically extend to windows a
+        topmost window spawns. Building this as our own chromeless,
+        -topmost, lift()'d dialog sidesteps that entirely, the same way
+        the rest of this app's chromeless popups already avoid it.
+
+        No real grab_set() here either, for the same reason the rest of
+        this file avoids combining one with a chromeless parent (see the
+        __init__ docstring above) - this blocks via wait_window() instead,
+        which is enough to pause the caller until the user responds
+        without risking the freeze a real grab could cause.
+        """
+        result = {"value": False}
+        dialog = Toplevel(self)
+        dialog.overrideredirect(True)
+        dialog.resizable(False, False)
+        dialog.configure(
+            bg=self.theme.BG, highlightthickness=2,
+            highlightbackground=self.theme.PURPLE, highlightcolor=self.theme.PURPLE,
+        )
+        if self.winfo_viewable():
+            dialog.transient(self)
+        dialog.attributes("-topmost", True)
+
+        content = ttk.Frame(dialog, padding=15)
+        content.grid(row=0, column=0)
+        ttk.Label(content, text=title, font=("Segoe UI", 11, "bold")).grid(
+            row=0, column=0, columnspan=2, pady=(0, 8)
+        )
+        ttk.Label(content, text=message, wraplength=280, justify="center").grid(
+            row=1, column=0, columnspan=2, pady=(0, 12)
+        )
+
+        def respond(value: bool):
+            result["value"] = value
+            dialog.destroy()
+
+        ttk.Button(content, text="Yes", command=lambda: respond(True)).grid(row=2, column=0, padx=5)
+        ttk.Button(content, text="No", command=lambda: respond(False)).grid(row=2, column=1, padx=5)
+        dialog.bind("<Return>", lambda e: respond(True))
+        dialog.bind("<Escape>", lambda e: respond(False))
+
+        dialog.update_idletasks()
+        x = self.winfo_x() + (self.winfo_width() // 2) - (dialog.winfo_width() // 2)
+        y = self.winfo_y() + (self.winfo_height() // 2) - (dialog.winfo_height() // 2)
+        dialog.geometry(f"+{x}+{y}")
+        dialog.lift()
+        dialog.focus_force()
+
+        self.wait_window(dialog)
+        return result["value"]
