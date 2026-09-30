@@ -166,7 +166,7 @@ class AttendanceWindow(Popup):
             return
         session = next((s for s in self._sessions if s.session_id == self.current_session_id), None)
         session_name = session.name if session else str(self.current_session_id)
-        if not messagebox.askyesno(
+        if not self.confirm(
             "Confirm Delete",
             f"Delete session '{session_name}' and all its attendance records? This cannot be undone.",
         ):
