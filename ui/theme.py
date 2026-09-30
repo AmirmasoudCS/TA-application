@@ -393,6 +393,20 @@ class Theme:
             indicatorcolor=[("selected", self.PURPLE), ("!selected", self.FIELD_BG)],
             indicatorforeground=[("selected", self.PURPLE)],
         )
+        # Checkbutton (e.g. the Attendance checklist) - same treatment as
+        # TRadiobutton above: themed text color and a themed check-mark
+        # box instead of the plain black-on-white OS default.
+        self.style.configure(
+            "TCheckbutton", background=self.BG, foreground=self.FG,
+            font=("Segoe UI", 10), focuscolor=self.BG,
+        )
+        self.style.map(
+            "TCheckbutton",
+            background=[("active", self.BG)],
+            foreground=[("disabled", self.DISABLED), ("!disabled", self.FG)],
+            indicatorcolor=[("selected", self.PURPLE), ("!selected", self.FIELD_BG)],
+            indicatorforeground=[("selected", self.TEXT_LIGHT)],
+        )
         self.style.configure(
             "TNotebook", background=self.BG, borderwidth=0,
         )
