@@ -34,7 +34,7 @@ class AttendanceWindow(Popup):
         passed in rather than queried here so this window doesn't need a
         second repository dependency (matches AnalyticsWindow's
         list_students passthrough pattern)."""
-        super().__init__(parent, "Attendance", theme, width=560, height=620,
+        super().__init__(parent, "Attendance", theme, width=640, height=620,
                           resizable=True, custom_titlebar=True, modal=False)
         self.attendance = attendance_repository
         self.students = sorted(students, key=lambda s: s.name.lower())
@@ -74,7 +74,9 @@ class AttendanceWindow(Popup):
         self._session_picker = ttk.Combobox(pick_row, state="readonly")
         self._session_picker.grid(row=1, column=0, sticky="ew", padx=(0, 5))
         self._session_picker.bind("<<ComboboxSelected>>", lambda e: self._load_selected_session())
-        ttk.Button(pick_row, text="Export List", command=self._open_export).grid(row=1, column=1)
+        ttk.Button(pick_row, text="Rename", command=self._rename_session).grid(row=1, column=1, padx=(0, 5))
+        ttk.Button(pick_row, text="Delete", command=self._delete_session).grid(row=1, column=2, padx=(0, 5))
+        ttk.Button(pick_row, text="Export List", command=self._open_export).grid(row=1, column=3)
 
         self._summary_label = ttk.Label(self.content, text="Create or pick a session above to begin.")
         self._summary_label.grid(row=2, column=0, sticky="w", padx=5, pady=(5, 5))
@@ -115,6 +117,70 @@ class AttendanceWindow(Popup):
         self._summary_label.config(
             text=f"'{session_name}' - Present: {len(self.present_sids)}/{len(self.students)}"
         )
+
+    def _rename_session(self):
+        if self.current_session_id is None:
+            messagebox.showinfo("No Session Selected", "Create or pick a session first.")
+            return
+        session = next((s for s in self._sessions if s.session_id == self.current_session_id), None)
+        if session is None:
+            return
+
+        # Small inline dialog, matching MainWindow._ask_base_grade's
+        # pattern of building a plain Popup directly rather than a whole
+        # dedicated window class for a single text field + button.
+        #
+        # custom_titlebar=True, modal=False (not the native-titlebar real
+        # grab used by _ask_base_grade's dialog): this dialog's parent is
+        # `self` (AttendanceWindow), which is itself chromeless. A real
+        # grab_set() combined with transient-to-a-chromeless-parent is
+        # exactly the combination that caused ExportWindow to freeze the
+        # app earlier - see ui/windows/export_window.py's docstring.
+        dialog = Popup(self, "Rename Session", self.theme, width=300, height=170,
+                        custom_titlebar=True, modal=False)
+        dialog.content.grid_columnconfigure(0, weight=1)
+        ttk.Label(dialog.content, text="New name:", anchor="center").grid(row=0, column=0, pady=(0, 5), sticky="ew")
+        name_var = StringVar(value=session.name)
+        entry = ttk.Entry(dialog.content, textvariable=name_var, justify="center")
+        entry.grid(row=1, column=0, sticky="ew")
+        entry.focus_set()
+        entry.icursor("end")
+
+        def submit():
+            new_name = name_var.get().strip()
+            if not new_name:
+                dialog.notify("warning", "Input Error", "Please enter a name.")
+                return
+            self.attendance.rename_session(self.course_name, self.current_session_id, new_name)
+            dialog.destroy()
+            self._refresh_session_list(select_session_id=self.current_session_id)
+
+        btn = ttk.Button(dialog.content, text="Save", command=submit)
+        btn.grid(row=2, column=0, pady=(10, 0))
+        entry.bind("<Return>", lambda e: btn.invoke())
+        dialog.center_over_parent()
+
+    def _delete_session(self):
+        if self.current_session_id is None:
+            messagebox.showinfo("No Session Selected", "Create or pick a session first.")
+            return
+        session = next((s for s in self._sessions if s.session_id == self.current_session_id), None)
+        session_name = session.name if session else str(self.current_session_id)
+        if not messagebox.askyesno(
+            "Confirm Delete",
+            f"Delete session '{session_name}' and all its attendance records? This cannot be undone.",
+        ):
+            return
+
+        self.attendance.delete_session(self.course_name, self.current_session_id)
+        self.current_session_id = None
+        self.present_sids = set()
+        self._session_picker.set("")
+        self._summary_label.config(text="Create or pick a session above to begin.")
+        for widget in self._list_frame.winfo_children():
+            widget.destroy()
+        self._row_widgets = []
+        self._refresh_session_list()
 
     # ---- checklist ----
     def _build_checklist_area(self):
