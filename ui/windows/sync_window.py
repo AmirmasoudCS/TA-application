@@ -167,7 +167,7 @@ class SyncWindow(Popup):
         if not self._found_files:
             messagebox.showinfo("Nothing to Import", "Scan a folder first.")
             return
-        if not messagebox.askyesno(
+        if not self.confirm(
             "Confirm Import",
             f"This will merge {len(self._found_files)} file(s) into your local data for "
             f"'{self.course_name}'. Newer scores automatically win over older ones. This "
