@@ -16,6 +16,18 @@ with them grouped together instead of scattered loose in one shared
 exports folder. Browse still lets the TA pick anywhere else entirely -
 whatever's in the field when Export is clicked is used as-is, with no
 extra subfolder appended on top of a manually chosen path.
+
+Uses the chromeless/topmost/no-grab Popup pattern (custom_titlebar=True,
+modal=False) rather than a native title bar with a real Tk grab. This
+window is opened both from MainWindow (parent = the root window) and from
+several chromeless popups (AnalyticsWindow, AttendanceWindow, SyncWindow -
+all overrideredirect Toplevels). A real modal grab_set() combined with
+self.transient(parent) is only safe, per popup.py's own docstring, when
+the parent is a window the OS window manager actually tracks normally -
+an overrideredirect window isn't, so wait_visibility() could hang forever
+waiting for a window the WM never properly maps, freezing the whole app.
+The chromeless/no-grab pattern sidesteps that regardless of which kind of
+window opens this one.
 """
 import os
 
@@ -39,7 +51,8 @@ class ExportWindow(Popup):
         format_key is one of 'csv', 'excel', 'pdf', 'all'.
         course_name: used to build the default per-course export folder;
         pass None to fall back to the plain EXPORT_DIRECTORY."""
-        super().__init__(parent, "Export", theme, width=420, height=320, custom_titlebar=False)
+        super().__init__(parent, "Export", theme, width=420, height=320,
+                          custom_titlebar=True, modal=False)
         self.on_export = on_export
         self.content.grid_columnconfigure(0, weight=1)
 
