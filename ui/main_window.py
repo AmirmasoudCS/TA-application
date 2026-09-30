@@ -36,6 +36,7 @@ from ui.windows.score_import_window import ScoreImportWindow
 from ui.windows.export_window import ExportWindow
 from ui.windows.sync_window import SyncWindow
 from ui.windows.shortcuts_window import ShortcutsWindow
+from ui.windows.attendance_window import AttendanceWindow
 from logging_setup import get_logger
 
 logger = get_logger("ui.main_window")
@@ -244,6 +245,7 @@ class MainWindow:
 
         self.stats_label = ttk.Label(select_frame, text="")
         self.stats_label.grid(row=1, column=2, sticky="ew", padx=10, pady=5)
+        ttk.Button(select_frame, text="Attendance", command=self._open_attendance).grid(row=1, column=7, padx=5, pady=5)
         ttk.Button(select_frame, text="Bulk Import Scores", command=self._open_score_import).grid(row=1, column=8, padx=5, pady=5)
         ttk.Button(select_frame, text="Analytics", command=self._open_analytics).grid(row=1, column=9, padx=5, pady=5)
 
@@ -573,6 +575,18 @@ class MainWindow:
         except Exception:
             logger.exception("Failed to open analytics window")
             messagebox.showerror("Error", "Could not open analytics. Check logs/taapp.log for details.")
+
+    def _open_attendance(self):
+        if not self.course_name:
+            messagebox.showwarning("Input Error", "Please set up a course first.")
+            return
+        try:
+            students = self.db.students.get_all(self.course_name)
+            AttendanceWindow(self.root, self.theme, self.db.attendance, students,
+                              self.course_name, self.current_ta_id)
+        except Exception:
+            logger.exception("Failed to open attendance window")
+            messagebox.showerror("Error", "Could not open attendance. Check logs/taapp.log for details.")
 
     # ---- settings / theming ----
     def _open_settings(self):
