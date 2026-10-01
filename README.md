@@ -57,13 +57,13 @@ A desktop app for teaching assistants to manage class rosters, track and grade a
 
 </div>
 
-### Score histogram
+### Analytics Tab
 
 <div align="center">
 
-<img src="assets/screenshots/histogram.png">
+<img src="assets/screenshots/analytics.png">
 
-<em><p>Visualize the score distribution for the selected table.</p></em>
+<em><p>Analytics tab for more information of the data.</p></em>
 
 </div>
 
@@ -110,25 +110,48 @@ Firstname Lastname StudentID
 ## 📁 Project Structure
 
 ```text
-📁
+📁 
 ├── 📁 assets
+│   ├── 📁 fonts
+│   │   ├── 📄 Vazirmatn-Black.ttf
+│   │   ├── 📄 Vazirmatn-Bold.ttf
+│   │   ├── 📄 Vazirmatn-ExtraBold.ttf
+│   │   ├── 📄 Vazirmatn-ExtraLight.ttf
+│   │   ├── 📄 Vazirmatn-Light.ttf
+│   │   ├── 📄 Vazirmatn-Medium.ttf
+│   │   ├── 📄 Vazirmatn-Regular.ttf
+│   │   ├── 📄 Vazirmatn-SemiBold.ttf
+│   │   └── 📄 Vazirmatn-Thin.ttf
 │   └── 📁 screenshots
+│       ├── 🖼️ analytics.png
+│       ├── 🖼️ enter_course.png
+│       ├── 🖼️ esc_menu.png
+│       ├── 🖼️ finalize.png
+│       ├── 🖼️ main_window.png
+│       ├── 🖼️ select_rouster.png
+│       └── 🖼️ settings_menu.png
 ├── 📁 data
-│   └── 📁 rosters
+│   ├── 📁 rosters
+│   └── 📁 score_imports
 ├── 📁 db
 │   ├── 🐍 __init__.py
+│   ├── 🐍 analytics_repository.py
 │   ├── 🐍 assessment_repository.py
+│   ├── 🐍 attendance_repository.py
 │   ├── 🐍 connection.py
 │   ├── 🐍 course_repository.py
 │   ├── 🐍 database.py
 │   ├── 🐍 models.py
-│   └── 🐍 student_repository.py
+│   ├── 🐍 student_repository.py
+│   └── 🐍 ta_repository.py
 ├── 📁 logs
 ├── 📁 services
 │   ├── 🐍 __init__.py
 │   ├── 🐍 export_service.py
 │   ├── 🐍 roster_import_service.py
-│   └── 🐍 stats_service.py
+│   ├── 🐍 score_import_service.py
+│   ├── 🐍 stats_service.py
+│   └── 🐍 sync_service.py
 ├── 📁 settings
 │   └── 📝 theme_config.txt
 ├── 📁 ui
@@ -138,10 +161,16 @@ Firstname Lastname StudentID
 │   │   └── 🐍 table_view.py
 │   ├── 📁 windows
 │   │   ├── 🐍 __init__.py
+│   │   ├── 🐍 analytics_window.py
+│   │   ├── 🐍 attendance_window.py
 │   │   ├── 🐍 comment_window.py
 │   │   ├── 🐍 course_setup_window.py
-│   │   ├── 🐍 histogram_window.py
+│   │   ├── 🐍 export_window.py
+│   │   ├── 🐍 score_import_window.py
 │   │   ├── 🐍 settings_window.py
+│   │   ├── 🐍 shortcuts_window.py
+│   │   ├── 🐍 sync_window.py
+│   │   ├── 🐍 ta_select_window.py
 │   │   └── 🐍 update_window.py
 │   ├── 🐍 __init__.py
 │   ├── 🐍 main_window.py
