@@ -221,6 +221,7 @@ class Popup(Toplevel):
         dialog.bind("<Return>", lambda e: respond(True))
         dialog.bind("<Escape>", lambda e: respond(False))
 
+        self.update_idletasks()
         dialog.update_idletasks()
         x = self.winfo_x() + (self.winfo_width() // 2) - (dialog.winfo_width() // 2)
         y = self.winfo_y() + (self.winfo_height() // 2) - (dialog.winfo_height() // 2)
