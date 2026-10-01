@@ -230,3 +230,6 @@ data/sync/
 
 # Current TA
 settings/current_ta.txt
+
+# Log
+tree.txt
