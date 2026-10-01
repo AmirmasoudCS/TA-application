@@ -223,8 +223,8 @@ class Popup(Toplevel):
 
         self.update_idletasks()
         dialog.update_idletasks()
-        x = self.winfo_x() + (self.winfo_width() // 2) - (dialog.winfo_width() // 2)
-        y = self.winfo_y() + (self.winfo_height() // 2) - (dialog.winfo_height() // 2)
+        x = self.winfo_rootx() + (self.winfo_width() // 2) - (dialog.winfo_width() // 2)
+        y = self.winfo_rooty() + (self.winfo_height() // 2) - (dialog.winfo_height() // 2)
         dialog.geometry(f"+{x}+{y}")
         dialog.lift()
         dialog.focus_force()
