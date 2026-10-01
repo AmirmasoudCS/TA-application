@@ -21,6 +21,10 @@ Subclasses/callers:
 from tkinter import Toplevel
 from tkinter import messagebox, ttk
 
+from logging_setup import get_logger
+
+logger = get_logger("ui.popup")
+
 
 class Popup(Toplevel):
     def __init__(self, parent, title: str, theme, width: int = None, height: int = None,
@@ -225,6 +229,11 @@ class Popup(Toplevel):
         dialog.update_idletasks()
         x = self.winfo_rootx() + (self.winfo_width() // 2) - (dialog.winfo_width() // 2)
         y = self.winfo_rooty() + (self.winfo_height() // 2) - (dialog.winfo_height() // 2)
+        logger.info(
+            "confirm() geometry: parent rootx=%s rooty=%s w=%s h=%s | dialog w=%s h=%s | computed pos=(%s,%s)",
+            self.winfo_rootx(), self.winfo_rooty(), self.winfo_width(), self.winfo_height(),
+            dialog.winfo_width(), dialog.winfo_height(), x, y,
+        )
         dialog.geometry(f"+{x}+{y}")
         dialog.lift()
         dialog.focus_force()
