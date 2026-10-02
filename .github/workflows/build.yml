@@ -50,21 +50,32 @@ jobs:
         run: pyinstaller TA-app.spec
 
       # dist/ now contains either TA-app/ (Windows/Linux) or
-      # TA-app.app/ (macOS, from the spec's BUNDLE() step) - zip
-      # whichever exists so there's exactly one file to download
-      # regardless of platform.
-      - name: Package build output (Windows/Linux)
-        if: matrix.os != 'macos-latest'
+      # TA-app.app/ (macOS, from the spec's BUNDLE() step). Packaging is
+      # split per-OS rather than one shared step, since the tool used to
+      # zip things up differs by platform - 7z (tried in an earlier
+      # version of this workflow) isn't guaranteed to exist on the Linux
+      # runner, so this uses zip (preinstalled on Linux/macOS) and
+      # PowerShell's built-in Compress-Archive (Windows) instead, neither
+      # of which depends on a tool that might be missing.
+      - name: Package build output (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist/TA-app -DestinationPath "${{ matrix.artifact_name }}.zip"
+
+      - name: Package build output (Linux)
+        if: matrix.os == 'ubuntu-latest'
         shell: bash
         run: |
           cd dist
-          7z a -tzip ../${{ matrix.artifact_name }}.zip TA-app
+          zip -r "../${{ matrix.artifact_name }}.zip" TA-app
 
       - name: Package build output (macOS)
         if: matrix.os == 'macos-latest'
+        shell: bash
         run: |
           cd dist
-          zip -r ../${{ matrix.artifact_name }}.zip TA-app.app
+          zip -r "../${{ matrix.artifact_name }}.zip" TA-app.app
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
