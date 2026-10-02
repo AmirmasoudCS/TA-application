@@ -14,10 +14,10 @@ to ui/widgets/table_view.TableView.
 """
 import os
 
-from tkinter import IntVar, StringVar, Tk, Toplevel, Frame
+from tkinter import IntVar, StringVar, Tk, Toplevel, Frame, PhotoImage
 from tkinter import font, messagebox, ttk
 
-from config import DB_PATH, CURRENT_TA_PATH, SYNC_DIRECTORY, APP_CREDIT
+from config import DB_PATH, CURRENT_TA_PATH, SYNC_DIRECTORY, APP_CREDIT, APP_ICON_ICO, APP_ICON_PNG
 from db.database import Database
 from services.roster_import_service import RosterImportService
 from services.export_service import ExportService
@@ -58,6 +58,7 @@ class MainWindow:
         self.root.option_add("*TEntry*justify", "center")
         self.root.title("Teacher Assistant Application")
         self.root.geometry("1400x800")
+        self._set_app_icon()
         self.root.attributes("-fullscreen", True)
         self.root.resizable(0, 0)
         for r in range(5):
@@ -101,6 +102,22 @@ class MainWindow:
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.root.update_idletasks()  # settle geometry before hiding, so popups can still center on it
         self.root.withdraw()  # stay hidden until course setup finishes
+
+    def _set_app_icon(self):
+        """Sets the window/taskbar icon from the bundled assets/logo
+        files. Wrapped in a broad try/except since a missing or
+        unreadable icon file should never prevent the app from launching
+        - worst case it just falls back to Tk's default icon."""
+        try:
+            self.root.iconbitmap(APP_ICON_ICO)
+        except Exception:
+            logger.debug("Could not set .ico window icon (expected on non-Windows platforms)", exc_info=True)
+        try:
+            icon_image = PhotoImage(file=APP_ICON_PNG)
+            self.root.iconphoto(True, icon_image)
+            self._icon_image = icon_image  # keep a reference - PhotoImage is garbage collected otherwise
+        except Exception:
+            logger.warning("Could not set window icon from %s", APP_ICON_PNG, exc_info=True)
 
     # ---- lifecycle ----
     def run(self):
