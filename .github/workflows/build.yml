@@ -1,0 +1,74 @@
+name: Build TA-app
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_name: TA-app-windows
+          - os: macos-latest
+            artifact_name: TA-app-macos
+          - os: ubuntu-latest
+            artifact_name: TA-app-linux
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # GitHub's Linux runners sometimes lack the system Tk libraries
+      # tkinter needs, even though Python itself is already installed -
+      # Windows/macOS runners don't need this, tkinter works there
+      # out of the box.
+      - name: Install Tk system libraries (Linux only)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build with PyInstaller
+        run: pyinstaller TA-app.spec
+
+      # dist/ now contains either TA-app/ (Windows/Linux) or
+      # TA-app.app/ (macOS, from the spec's BUNDLE() step) - zip
+      # whichever exists so there's exactly one file to download
+      # regardless of platform.
+      - name: Package build output (Windows/Linux)
+        if: matrix.os != 'macos-latest'
+        shell: bash
+        run: |
+          cd dist
+          7z a -tzip ../${{ matrix.artifact_name }}.zip TA-app
+
+      - name: Package build output (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          cd dist
+          zip -r ../${{ matrix.artifact_name }}.zip TA-app.app
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_name }}.zip
+          retention-days: 30
