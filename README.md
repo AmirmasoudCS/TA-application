@@ -122,6 +122,9 @@ Firstname Lastname StudentID
 │   │   ├── 📄 Vazirmatn-Regular.ttf
 │   │   ├── 📄 Vazirmatn-SemiBold.ttf
 │   │   └── 📄 Vazirmatn-Thin.ttf
+│   ├── 📁 logo
+│   │   ├── 📄 icon.ico
+│   │   └── 🖼️ icon.png
 │   └── 📁 screenshots
 │       ├── 🖼️ analytics.png
 │       ├── 🖼️ enter_course.png
@@ -180,7 +183,8 @@ Firstname Lastname StudentID
 ├── 🐍 logging_setup.py
 ├── 🐍 main.py
 ├── 📘 README.md
-└── 📝 requirements.txt
+├── 📝 requirements.txt
+└── 📄 TA-app.spec
 ```
 
 > Generated using [Tree Printer](https://github.com/AmirmasoudCS/Tree-Printer.git).
