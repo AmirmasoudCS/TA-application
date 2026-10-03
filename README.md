@@ -2,6 +2,16 @@
 
 A desktop app for teaching assistants to manage class rosters, track and grade assignments, and export results. Built with Python and Tkinter, backed by SQLite.
 
+## 📥 Download
+
+Download the latest standalone build for your operating system:
+
+- [Windows](https://github.com/AmirmasoudCS/TA-application/releases/latest/download/TA-app-windows.zip)
+- [macOS](https://github.com/AmirmasoudCS/TA-application/releases/latest/download/TA-app-macos.zip)
+- [Linux](https://github.com/AmirmasoudCS/TA-application/releases/latest/download/TA-app-linux.zip)
+
+> No Python installation is required for the standalone builds.
+
 ## ✨ Features
 
 - **Course & roster management**: Create multiple courses and import student rosters from text files.
